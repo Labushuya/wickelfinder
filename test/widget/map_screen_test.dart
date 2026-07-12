@@ -53,7 +53,8 @@ void main() {
     expect(find.text('Café Klein'), findsOneWidget);
     expect(find.text('Im Erdgeschoss'), findsOneWidget);
     expect(find.text('Barrierefrei zugänglich'), findsOneWidget);
-    expect(find.text('Kostenlos'), findsOneWidget);
+    // Kosten sind jetzt Teil des kombinierten Zugaenglichkeits-Banners.
+    expect(find.textContaining('kostenlos'), findsOneWidget);
     expect(find.text('Quelle: OpenStreetMap'), findsOneWidget);
     // Ohne konfiguriertes Backend erscheint kein Bewerten-Button.
     expect(find.text('Noch keine Bewertungen'), findsOneWidget);
