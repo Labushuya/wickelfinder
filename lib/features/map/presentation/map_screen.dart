@@ -48,11 +48,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             userAgentPackageName: 'de.wickelfinder.app',
           ),
           MarkerLayer(markers: _buildMarkers(placesAsync)),
-          // OSM-Lizenz-Attribution (ODbL-Pflicht)
-          const RichAttributionWidget(
-            attributions: [
-              TextSourceAttribution('© OpenStreetMap-Mitwirkende'),
-            ],
+          // OSM-Lizenz-Attribution (ODbL-Pflicht). SafeArea(top:false) laesst die
+          // Tiles randlos unter der Statusbar, schiebt aber die interaktive
+          // Attribution ueber die System-NavBar (Gesten-Pill/3-Button-Nav).
+          // SafeArea liest das reale Inset -> keine Magic Numbers.
+          const SafeArea(
+            top: false,
+            minimum: EdgeInsets.only(right: 8, bottom: 8),
+            child: RichAttributionWidget(
+              attributions: [
+                TextSourceAttribution('© OpenStreetMap-Mitwirkende'),
+              ],
+            ),
           ),
         ],
       ),
