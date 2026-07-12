@@ -9,21 +9,25 @@ class RatingInput {
   final Set<PlaceTag> tags;
 }
 
-/// Dialog zum Bewerten eines Platzes: 1-5 Sterne + optionale Attribut-Tags.
-/// Gibt beim Absenden ein [RatingInput] zurueck, sonst null (Abbruch).
+/// Dialog zum Bewerten eines Platzes: 1-5 Sterne (zentriert, gross) +
+/// scrollbare Attribut-Tags. Als BottomSheet praesentiert, damit auch bei
+/// vielen Tags komfortabel bedienbar.
 class RatePlaceDialog extends StatefulWidget {
   const RatePlaceDialog({super.key, this.initialStars, this.initialTags});
 
   final int? initialStars;
   final Set<PlaceTag>? initialTags;
 
+  /// Zeigt den Dialog als modales BottomSheet und liefert das Ergebnis.
   static Future<RatingInput?> show(
     BuildContext context, {
     int? initialStars,
     Set<PlaceTag>? initialTags,
   }) {
-    return showDialog<RatingInput>(
+    return showModalBottomSheet<RatingInput>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) =>
           RatePlaceDialog(initialStars: initialStars, initialTags: initialTags),
     );
@@ -39,61 +43,104 @@ class _RatePlaceDialogState extends State<RatePlaceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Platz bewerten'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Sterne-Auswahl
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 1; i <= 5; i++)
-                IconButton(
-                  icon: Icon(
-                    i <= _stars ? Icons.star : Icons.star_border,
-                    size: 36,
-                  ),
-                  color: Colors.amber,
-                  tooltip: '$i Sterne',
-                  onPressed: () => setState(() => _stars = i),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text('Eigenschaften (optional)'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              for (final tag in PlaceTag.values)
-                FilterChip(
-                  label: Text(tag.label),
-                  selected: _tags.contains(tag),
-                  onSelected: (sel) =>
-                      setState(() => sel ? _tags.add(tag) : _tags.remove(tag)),
-                ),
-            ],
-          ),
-        ],
+    final theme = Theme.of(context);
+    // Hoehe an Tastatur/Inhalt anpassen; max 85% des Screens.
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
-        FilledButton(
-          onPressed: _stars == 0
-              ? null
-              : () => Navigator.pop(
-                  context,
-                  RatingInput(stars: _stars, tags: _tags),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              child: Text('Platz bewerten', style: theme.textTheme.titleLarge),
+            ),
+            const SizedBox(height: 8),
+            // Sterne: zentriert und gross.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 1; i <= 5; i++)
+                  IconButton(
+                    iconSize: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    icon: Icon(
+                      i <= _stars
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                    ),
+                    color: Colors.amber,
+                    tooltip: '$i Sterne',
+                    onPressed: () => setState(() => _stars = i),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Eigenschaften (optional)',
+                  style: theme.textTheme.labelLarge,
                 ),
-          child: const Text('Absenden'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Tags: scrollbar, damit auch viele Tags komfortabel passen.
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final tag in PlaceTag.values)
+                      FilterChip(
+                        label: Text(tag.label),
+                        selected: _tags.contains(tag),
+                        onSelected: (sel) => setState(
+                          () => sel ? _tags.add(tag) : _tags.remove(tag),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Abbrechen'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _stars == 0
+                          ? null
+                          : () => Navigator.pop(
+                              context,
+                              RatingInput(stars: _stars, tags: _tags),
+                            ),
+                      child: const Text('Absenden'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

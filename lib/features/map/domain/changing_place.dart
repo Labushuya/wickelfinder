@@ -1,5 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
+import 'venue_context.dart';
+
 /// Domänen-Modell für einen Wickelplatz.
 ///
 /// Quelle ist zunächst OpenStreetMap (`changing_table=yes`); die
@@ -14,6 +16,7 @@ class ChangingPlace {
     this.fee,
     this.locationHint,
     this.source = PlaceSource.osm,
+    this.venueContext = VenueContext.unknown,
   });
 
   /// Eindeutige ID. Für OSM: "<type>/<osmId>", z. B. "node/12345".
@@ -31,6 +34,9 @@ class ChangingPlace {
   final String? locationHint;
 
   final PlaceSource source;
+
+  /// Örtlicher Kontext (Schwimmbad/Restaurant/…), abgeleitet aus OSM-Tags.
+  final VenueContext venueContext;
 
   /// Stabile Referenz fuer Community-Feedback (Rating/Flag).
   /// OSM: "node/123" (== [id]). Community: "community/<uuid>".
@@ -51,6 +57,11 @@ class ChangingPlace {
     if (lat == null || lon == null) return null;
 
     final tags = (el['tags'] as Map?)?.cast<String, dynamic>() ?? const {};
+    // Tags fuer die Kontext-Ableitung als String-Map (nur String-Werte).
+    final stringTags = <String, String>{
+      for (final e in tags.entries)
+        if (e.value is String) e.key: e.value as String,
+    };
 
     return ChangingPlace(
       id: '$type/$osmId',
@@ -59,6 +70,7 @@ class ChangingPlace {
       wheelchairAccessible: _yesNo(tags['wheelchair'] as String?),
       fee: _yesNo(tags['fee'] as String?),
       locationHint: tags['changing_table:location'] as String?,
+      venueContext: VenueContext.fromTags(stringTags),
     );
   }
 
