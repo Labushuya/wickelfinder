@@ -1,0 +1,28 @@
+# Wickelfinder – App-Icon-Generierung
+#
+# Erzeugt Android Adaptive Icons (mipmap-anydpi-v26) + Legacy-mipmaps als Fallback
+# aus den committeten PNGs unter brand/render/.
+#
+# Aufruf (nach `flutter create --platforms=android` + `flutter pub get`):
+#   dart run flutter_launcher_icons
+#
+# In CI: siehe .github/workflows/release.yml (Step "App-Icons generieren").
+# min_sdk_android bewusst weggelassen -> erbt Flutter-Default (24). Adaptive ab API 26,
+# darunter greifen die mitgenerierten Legacy-mipmaps.
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+
+  # Legacy-Fallback (Geräte < API 26): quadratisches Icon aus dem Vordergrund.
+  image_path: "brand/render/foreground.png"
+
+  # Adaptive Icon (API 26+): getrennte Ebenen.
+  adaptive_icon_foreground: "brand/render/foreground.png"
+  adaptive_icon_background: "brand/render/background.png"
+  # Themed Icon (Android 13+): einfarbige Silhouette, vom System eingefärbt.
+  adaptive_icon_monochrome: "brand/render/monochrome.png"
+
+  # Padding ist bereits im SVG/PNG eingebacken (Motiv in zentraler 66%-Safe-Zone),
+  # daher KEIN zusätzlicher Inset -> sonst wird das Motiv doppelt verkleinert.
+  adaptive_icon_foreground_inset: 0

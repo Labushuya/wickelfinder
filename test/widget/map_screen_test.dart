@@ -11,9 +11,7 @@ void main() {
   testWidgets('MapScreen rendert AppBar-Titel "Wickelfinder"', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          placesProvider.overrideWith((ref, bbox) async => const []),
-        ],
+        overrides: [placesProvider.overrideWith((ref, bbox) async => const [])],
         child: const MaterialApp(home: MapScreen()),
       ),
     );
@@ -46,8 +44,9 @@ void main() {
     expect(find.text('Quelle: OpenStreetMap'), findsOneWidget);
   });
 
-  testWidgets('PlaceDetailSheet nutzt Fallback-Titel ohne Namen',
-      (tester) async {
+  testWidgets('PlaceDetailSheet nutzt Fallback-Titel ohne Namen', (
+    tester,
+  ) async {
     const place = ChangingPlace(id: 'node/2', location: LatLng(1, 2));
 
     await tester.pumpWidget(

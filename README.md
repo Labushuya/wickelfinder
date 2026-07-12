@@ -1,4 +1,6 @@
-<!-- Banner wird ergänzt, sobald das finale Logo vorliegt (siehe brand/DESIGN-BRIEF.md) -->
+<p align="center">
+  <img src="brand/render/preview.png" alt="Wickelfinder Logo" width="160" height="160">
+</p>
 
 # 🍼 Wickelfinder
 

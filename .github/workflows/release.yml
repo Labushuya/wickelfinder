@@ -29,6 +29,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.35.5
           cache: true
 
       - name: Dependencies auflösen
@@ -44,6 +45,12 @@ jobs:
       # damit das Repo frei von generiertem Scaffolding bleibt.
       - name: Android-Plattform generieren
         run: flutter create --platforms=android --project-name wickelfinder .
+
+      # Injiziert Adaptive Icons (+ Legacy-mipmaps) in den soeben generierten
+      # android/-Baum. Muss NACH `flutter create` und VOR `flutter build` laufen.
+      # Quelle: flutter_launcher_icons.yaml + brand/render/*.png (im Repo).
+      - name: App-Icons generieren (Adaptive + Legacy)
+        run: dart run flutter_launcher_icons
 
       - name: Release-APK bauen
         run: flutter build apk --release --build-name=${GITHUB_REF_NAME#v}

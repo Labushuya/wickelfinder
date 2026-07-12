@@ -29,6 +29,9 @@ dev_dependencies:
     sdk: flutter
   # Lint-Regeln – Gate in CI
   flutter_lints: 4.0.0
+  # Generiert Android Adaptive Icons (+ Legacy-mipmap-Fallback) zur Build-Zeit
+  # aus den PNGs unter brand/render/. Siehe flutter_launcher_icons.yaml.
+  flutter_launcher_icons: 0.14.4
 
 flutter:
   uses-material-design: true
