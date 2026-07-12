@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/supabase/supabase_init.dart';
 import 'core/theme/app_theme.dart';
 import 'features/map/presentation/map_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Backend nur initialisieren, wenn per --dart-define konfiguriert.
+  // Ohne Konfiguration laeuft die App als reine (Offline-taugliche) Kartenansicht.
+  await SupabaseInit.ensureInitialized();
   runApp(const ProviderScope(child: WickelfinderApp()));
 }
 

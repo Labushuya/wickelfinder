@@ -24,10 +24,9 @@ class PlaceDetailSheet extends StatelessWidget {
           if (place.wheelchairAccessible != null)
             _InfoRow(
               icon: Icons.accessible,
-              label:
-                  place.wheelchairAccessible!
-                      ? 'Barrierefrei zugänglich'
-                      : 'Nicht barrierefrei',
+              label: place.wheelchairAccessible!
+                  ? 'Barrierefrei zugänglich'
+                  : 'Nicht barrierefrei',
             ),
           if (place.fee != null)
             _InfoRow(
@@ -36,10 +35,9 @@ class PlaceDetailSheet extends StatelessWidget {
             ),
           _InfoRow(
             icon: Icons.source_outlined,
-            label:
-                place.source == PlaceSource.osm
-                    ? 'Quelle: OpenStreetMap'
-                    : 'Quelle: Community',
+            label: place.source == PlaceSource.osm
+                ? 'Quelle: OpenStreetMap'
+                : 'Quelle: Community',
           ),
         ],
       ),
