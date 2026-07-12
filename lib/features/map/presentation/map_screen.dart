@@ -20,7 +20,7 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   static const _initialCenter = LatLng(52.515, 13.395); // Berlin
-  BBox _currentBBox = BBox.berlin;
+  final BBox _currentBBox = BBox.berlin;
 
   @override
   Widget build(BuildContext context) {

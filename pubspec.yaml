@@ -35,5 +35,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/
+  # Noch keine App-Assets nötig; Deklaration ergänzen, sobald Dateien
+  # unter assets/ liegen (sonst warnt der Analyzer über leeres Verzeichnis).
