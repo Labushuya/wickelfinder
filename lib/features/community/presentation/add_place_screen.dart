@@ -53,7 +53,8 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
                   options: MapOptions(
                     initialCenter: widget.initialCenter,
                     initialZoom: 16,
-                    onPositionChanged: (pos, _) => _center = pos.center,
+                    onPositionChanged: (pos, _) =>
+                        _center = pos.center ?? _center,
                   ),
                   children: [
                     TileLayer(
