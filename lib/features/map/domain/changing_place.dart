@@ -32,6 +32,10 @@ class ChangingPlace {
 
   final PlaceSource source;
 
+  /// Stabile Referenz fuer Community-Feedback (Rating/Flag).
+  /// OSM: "node/123" (== [id]). Community: "community/<uuid>".
+  String get placeRef => source == PlaceSource.community ? 'community/$id' : id;
+
   /// Erzeugt einen [ChangingPlace] aus einem Overpass-JSON-Element.
   ///
   /// Unterstützt `node` (mit `lat`/`lon`) und `way`/`relation`
