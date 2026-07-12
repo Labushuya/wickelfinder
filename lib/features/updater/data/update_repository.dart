@@ -59,9 +59,9 @@ class UpdateRepository {
     final tag = (json['tag_name'] as String?)?.replaceFirst('v', '');
     if (tag == null) return null;
     final assets = (json['assets'] as List?) ?? const [];
-    final apk = assets.cast<Map>().firstWhere(
+    final apk = assets.cast<Map<String, dynamic>>().firstWhere(
       (a) => (a['name'] as String? ?? '').endsWith('.apk'),
-      orElse: () => const {},
+      orElse: () => const <String, dynamic>{},
     );
     final url = apk['browser_download_url'] as String?;
     final name = apk['name'] as String?;

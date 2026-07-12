@@ -6,7 +6,6 @@ import '../../community/domain/place_stats.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/rate_place_dialog.dart';
 import '../domain/changing_place.dart';
-import '../domain/venue_context.dart';
 
 /// Bottom-Sheet mit Details zu einem Wickelplatz inkl. Community-Bewertung.
 class PlaceDetailSheet extends ConsumerWidget {
