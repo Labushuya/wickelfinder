@@ -32,7 +32,9 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: PlaceDetailSheet(place: place))),
+      const MaterialApp(
+        home: Scaffold(body: PlaceDetailSheet(place: place)),
+      ),
     );
 
     expect(find.text('Café Klein'), findsOneWidget);
@@ -48,7 +50,9 @@ void main() {
     const place = ChangingPlace(id: 'node/2', location: LatLng(1, 2));
 
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: PlaceDetailSheet(place: place))),
+      const MaterialApp(
+        home: Scaffold(body: PlaceDetailSheet(place: place)),
+      ),
     );
 
     expect(find.text('Wickelplatz'), findsOneWidget);
