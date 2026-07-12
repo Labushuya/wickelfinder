@@ -19,7 +19,9 @@ abstract final class SupabaseInit {
 
   static Future<void> ensureInitialized() async {
     if (!isConfigured) return;
-    await Supabase.initialize(url: _url, anonKey: _anonKey);
+    // publishableKey ersetzt das deprecatete anonKey (gleicher Wert, neuer
+    // Parametername ab supabase_flutter 2.15).
+    await Supabase.initialize(url: _url, publishableKey: _anonKey);
   }
 
   /// Zugriff auf den initialisierten Client. Wirft, wenn nicht konfiguriert —
