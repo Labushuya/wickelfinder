@@ -43,8 +43,36 @@ jobs:
 
       # Android-Plattform-Ordner wird generiert (nicht im Repo eingecheckt),
       # damit das Repo frei von generiertem Scaffolding bleibt.
+      # --org setzt Namespace/applicationId auf de.wickelfinder.* (statt com.example).
       - name: Android-Plattform generieren
-        run: flutter create --platforms=android --project-name wickelfinder .
+        run: flutter create --platforms=android --org de.wickelfinder --project-name wickelfinder .
+
+      # INTERNET-Permission ins RELEASE-Manifest injizieren.
+      # Flutter legt INTERNET nur in src/debug|profile an; ein Release-Build merged
+      # NUR src/main -> ohne diesen Schritt kann die APK kein DNS/keine Tiles laden
+      # (SocketException 'Failed host lookup' -> weisser Screen). Verifiziert gegen
+      # das Flutter-3.35.5-Template. grep-Guard = idempotent (ueberlebt Re-Runs von
+      # flutter create); Anker </manifest> ist ueber Flutter-Versionen stabil.
+      - name: INTERNET-Permission ins Release-Manifest injizieren
+        run: |
+          set -euo pipefail
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          test -f "$MANIFEST"
+          add_perm() {
+            local perm="$1"
+            if ! grep -q "android.permission.$perm" "$MANIFEST"; then
+              sed -i "s#</manifest>#    <uses-permission android:name=\"android.permission.$perm\"/>\n</manifest>#" "$MANIFEST"
+              echo "added $perm"
+            else
+              echo "$perm already present"
+            fi
+          }
+          add_perm INTERNET
+          add_perm ACCESS_NETWORK_STATE
+          echo '--- uses-permission im Release-Manifest ---'
+          grep 'uses-permission' "$MANIFEST"
+          # fail-fast: bricht den Build ab, falls der Inject nicht griff
+          grep -q 'android.permission.INTERNET' "$MANIFEST"
 
       # Injiziert Adaptive Icons (+ Legacy-mipmaps) in den soeben generierten
       # android/-Baum. Muss NACH `flutter create` und VOR `flutter build` laufen.
