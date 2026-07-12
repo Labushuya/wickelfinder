@@ -1,0 +1,74 @@
+name: Release
+
+# Baut bei einem SemVer-Tag (v*) eine Android-APK, testet vorher und
+# veröffentlicht die APK als GitHub Release.
+on:
+  push:
+    tags:
+      - "v*"
+
+# Braucht Schreibrechte auf contents, um das Release anzulegen.
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build, Test & Release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java (für Android-Build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependencies auflösen
+        run: flutter pub get
+
+      - name: Static Analysis (Gate)
+        run: flutter analyze --fatal-infos
+
+      - name: Tests (Gate – kein Release bei rotem Test)
+        run: flutter test
+
+      # Android-Plattform-Ordner wird generiert (nicht im Repo eingecheckt),
+      # damit das Repo frei von generiertem Scaffolding bleibt.
+      - name: Android-Plattform generieren
+        run: flutter create --platforms=android --project-name wickelfinder .
+
+      - name: Release-APK bauen
+        run: flutter build apk --release --build-name=${GITHUB_REF_NAME#v}
+
+      - name: APK umbenennen (mit Version)
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             "dist/wickelfinder-${GITHUB_REF_NAME}.apk"
+
+      - name: GitHub Release mit APK erstellen
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
+          generate_release_notes: true
+          body: |
+            ## Wickelfinder ${{ github.ref_name }}
+
+            Automatisch gebaut und getestet via GitHub Actions.
+
+            **Installation:** APK herunterladen und auf dem Android-Gerät öffnen
+            (Installation aus unbekannten Quellen ggf. erlauben).
+
+            Alle Tests (`flutter test`) und die statische Analyse
+            (`flutter analyze`) sind vor dem Build grün durchgelaufen.
+
+            © OpenStreetMap-Mitwirkende (ODbL) für die Kartendaten.

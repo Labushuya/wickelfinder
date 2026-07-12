@@ -1,0 +1,10 @@
+# Konsistente Zeilenenden: LF für Text/Code, damit CI (Linux) und
+# lokale Windows-Entwicklung nicht divergieren.
+* text=auto eol=lf
+
+# Binärdateien nicht anfassen
+*.png binary
+*.jpg binary
+*.jks binary
+*.keystore binary
+*.apk binary
