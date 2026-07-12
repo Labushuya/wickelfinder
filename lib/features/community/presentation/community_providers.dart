@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/supabase/supabase_init.dart';
+import '../data/community_repository.dart';
 import '../domain/place_stats.dart';
-import 'community_repository.dart';
 
 /// Stellt das [CommunityRepository] bereit — aber nur, wenn Supabase
 /// konfiguriert ist. Sonst null -> UI zeigt keine Community-Funktionen.

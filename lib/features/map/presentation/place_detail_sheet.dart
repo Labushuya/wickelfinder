@@ -71,10 +71,11 @@ class PlaceDetailSheet extends ConsumerWidget {
     WidgetRef ref,
     CommunityRepository repo,
   ) async {
+    // Messenger VOR dem await erfassen -> kein BuildContext-Zugriff nach async gap.
+    final messenger = ScaffoldMessenger.of(context);
     final input = await RatePlaceDialog.show(context);
     if (input == null) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await repo.submitRating(
         placeRef: place.placeRef,
