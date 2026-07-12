@@ -1,5 +1,7 @@
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../map/domain/changing_place.dart';
 import '../domain/place_stats.dart';
 import '../domain/place_tag.dart';
 import 'anon_session.dart';
@@ -13,11 +15,15 @@ class CommunityException implements Exception {
 
   /// Nutzerfreundliche deutsche Meldung fuer bekannte Fehlercodes.
   String get userMessage => switch (code) {
-    'rate_limit' => 'Zu viele Bewertungen in kurzer Zeit. Bitte später erneut.',
+    'rate_limit' => 'Zu viele Beiträge in kurzer Zeit. Bitte später erneut.',
+    'geo_rate_limit' => 'Hier hast du kürzlich schon einen Platz gemeldet.',
+    'geo_cluster_cap' => 'In diesem Bereich gibt es bereits viele Einträge.',
     'self_rating' => 'Eigene Plätze können nicht bewertet werden.',
     'auth_required' => 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
     'bad_stars' => 'Ungültige Bewertung.',
     'bad_ref' => 'Ungültiger Platz.',
+    'bad_coords' => 'Ungültige Koordinaten.',
+    'name_too_long' || 'hint_too_long' => 'Eingabe zu lang.',
     _ => 'Aktion fehlgeschlagen. Bitte später erneut versuchen.',
   };
 
@@ -73,14 +79,72 @@ class CommunityRepository {
     }
   }
 
+  /// Laedt alle sichtbaren Community-Plaetze (aus community_places_public)
+  /// als [ChangingPlace] mit `source = PlaceSource.community`. Lesen ohne Login.
+  Future<List<ChangingPlace>> communityPlaces() async {
+    final rows = await _client
+        .from('community_places_public')
+        .select('id, name, location_hint, wheelchair, fee, lat, lon');
+    return [
+      for (final row in rows)
+        ChangingPlace(
+          id: row['id'] as String,
+          location: LatLng(
+            (row['lat'] as num).toDouble(),
+            (row['lon'] as num).toDouble(),
+          ),
+          name: row['name'] as String?,
+          wheelchairAccessible: row['wheelchair'] as bool?,
+          fee: row['fee'] as bool?,
+          locationHint: row['location_hint'] as String?,
+          source: PlaceSource.community,
+        ),
+    ];
+  }
+
+  /// Fuegt einen neuen Community-Platz hinzu. Meldet lazy anonym an.
+  /// Gibt die neue place_ref zurueck.
+  Future<String> addPlace({
+    required double lat,
+    required double lon,
+    String? name,
+    String? locationHint,
+    bool? wheelchair,
+    bool? fee,
+  }) async {
+    await _session.ensureSignedIn();
+    try {
+      final ref = await _client.rpc<String>(
+        'add_community_place',
+        params: {
+          'p_lat': lat,
+          'p_lon': lon,
+          'p_name': name,
+          'p_hint': locationHint,
+          'p_wheelchair': wheelchair,
+          'p_fee': fee,
+        },
+      );
+      return ref;
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
   /// Zieht den 'raise exception <code>'-Text aus der Postgres-Fehlermeldung.
   static String _extractCode(String message) {
+    // Spezifischere Codes zuerst: 'geo_rate_limit' enthaelt 'rate_limit'.
     for (final code in [
+      'geo_rate_limit',
+      'geo_cluster_cap',
       'rate_limit',
       'self_rating',
       'auth_required',
       'bad_stars',
       'bad_ref',
+      'bad_coords',
+      'name_too_long',
+      'hint_too_long',
     ]) {
       if (message.contains(code)) return code;
     }

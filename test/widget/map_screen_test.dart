@@ -5,7 +5,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:wickelfinder/features/community/domain/place_stats.dart';
 import 'package:wickelfinder/features/community/presentation/community_providers.dart';
 import 'package:wickelfinder/features/map/domain/changing_place.dart';
-import 'package:wickelfinder/features/map/presentation/map_providers.dart';
 import 'package:wickelfinder/features/map/presentation/map_screen.dart';
 import 'package:wickelfinder/features/map/presentation/place_detail_sheet.dart';
 
@@ -26,7 +25,9 @@ void main() {
   testWidgets('MapScreen rendert AppBar-Titel "Wickelfinder"', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [placesProvider.overrideWith((ref, bbox) async => const [])],
+        overrides: [
+          mergedPlacesProvider.overrideWith((ref, bbox) async => const []),
+        ],
         child: const MaterialApp(home: MapScreen()),
       ),
     );
