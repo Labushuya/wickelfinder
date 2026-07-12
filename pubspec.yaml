@@ -1,0 +1,36 @@
+name: wickelfinder
+description: "Wickelfinder – finde schnell Wickelplätze in deiner Nähe. Community-gepflegt, Open Source."
+publish_to: "none"
+
+# SemVer: MAJOR.MINOR.PATCH+BUILD
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # State Management – Golden Standard, testbar, kein BuildContext-Zwang
+  flutter_riverpod: 2.5.1
+  # Karte auf OpenStreetMap-Tiles, kein API-Key nötig
+  flutter_map: 6.1.0
+  latlong2: 0.9.1
+  # HTTP für Overpass API
+  http: 1.2.1
+  # Standortbestimmung (on-device, DSGVO-schonend)
+  geolocator: 12.0.0
+  # Icons
+  cupertino_icons: 1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Lint-Regeln – Gate in CI
+  flutter_lints: 4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

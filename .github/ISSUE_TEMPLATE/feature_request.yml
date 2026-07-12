@@ -1,0 +1,22 @@
+name: 💡 Feature vorschlagen
+description: Eine Idee oder Verbesserung für Wickelfinder
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem löst das Feature?
+      description: Welcher Bedarf steckt dahinter?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Vorgeschlagene Lösung
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen
+      description: Andere Ansätze, die du erwogen hast (optional).

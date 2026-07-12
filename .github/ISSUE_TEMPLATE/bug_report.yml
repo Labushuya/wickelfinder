@@ -1,0 +1,31 @@
+name: 🐛 Bug melden
+description: Ein Problem oder Fehlverhalten in Wickelfinder melden
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Was ist passiert?
+      description: Beschreibe den Fehler und was du erwartet hättest.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zur Reproduktion
+      placeholder: |
+        1. Öffne …
+        2. Tippe auf …
+        3. Fehler tritt auf
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App-Version
+      placeholder: "z. B. v0.1.0"
+  - type: input
+    id: device
+    attributes:
+      label: Gerät / Android-Version
+      placeholder: "z. B. Pixel 7, Android 14"
