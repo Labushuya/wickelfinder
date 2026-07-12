@@ -22,9 +22,8 @@ abstract final class LocationService {
       }
 
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
-        ),
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 10),
       );
       return LatLng(pos.latitude, pos.longitude);
     } catch (_) {
