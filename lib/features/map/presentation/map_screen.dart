@@ -9,6 +9,7 @@ import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
+import '../../community/presentation/my_places_screen.dart';
 import '../../search/presentation/address_search_bar.dart';
 import '../../updater/presentation/update_sheet.dart';
 import '../domain/changing_place.dart';
@@ -105,10 +106,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       onSelected: (v) {
                         if (v == 'update') {
                           UpdateSheet.checkAndShow(context, ref, manual: true);
+                        } else if (v == 'my_pins') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MyPlacesScreen(),
+                            ),
+                          );
                         }
                       },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
+                      itemBuilder: (_) => [
+                        if (hasBackend)
+                          const PopupMenuItem(
+                            value: 'my_pins',
+                            child: Row(
+                              children: [
+                                Icon(Icons.push_pin_outlined, size: 20),
+                                SizedBox(width: 10),
+                                Text('Meine Pins'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
                           value: 'update',
                           child: Row(
                             children: [

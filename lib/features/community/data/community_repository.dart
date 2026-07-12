@@ -24,6 +24,7 @@ class CommunityException implements Exception {
     'bad_ref' => 'Ungültiger Platz.',
     'bad_coords' => 'Ungültige Koordinaten.',
     'name_too_long' || 'hint_too_long' => 'Eingabe zu lang.',
+    'not_owner_or_missing' => 'Dieser Platz gehört dir nicht (mehr).',
     _ => 'Aktion fehlgeschlagen. Bitte später erneut versuchen.',
   };
 
@@ -131,6 +132,70 @@ class CommunityRepository {
     }
   }
 
+  /// Laedt die eigenen Community-Plaetze (View my_community_places, RLS:
+  /// created_by = auth.uid()). Ohne bestehende Session -> leere Liste.
+  Future<List<ChangingPlace>> myPlaces() async {
+    if (_session.currentUserId == null) return const [];
+    final rows = await _client
+        .from('my_community_places')
+        .select('id, name, location_hint, wheelchair, fee, lat, lon')
+        .order('created_at', ascending: false);
+    return [
+      for (final row in rows)
+        ChangingPlace(
+          id: row['id'] as String,
+          location: LatLng(
+            (row['lat'] as num).toDouble(),
+            (row['lon'] as num).toDouble(),
+          ),
+          name: row['name'] as String?,
+          wheelchairAccessible: row['wheelchair'] as bool?,
+          fee: row['fee'] as bool?,
+          locationHint: row['location_hint'] as String?,
+          source: PlaceSource.community,
+        ),
+    ];
+  }
+
+  /// Aktualisiert einen eigenen Platz. Server prueft Eigentuemerschaft.
+  Future<void> updatePlace({
+    required String id,
+    required double lat,
+    required double lon,
+    String? name,
+    String? locationHint,
+    bool? wheelchair,
+    bool? fee,
+  }) async {
+    await _session.ensureSignedIn();
+    try {
+      await _client.rpc<void>(
+        'update_community_place',
+        params: {
+          'p_id': id,
+          'p_lat': lat,
+          'p_lon': lon,
+          'p_name': name,
+          'p_hint': locationHint,
+          'p_wheelchair': wheelchair,
+          'p_fee': fee,
+        },
+      );
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Loescht einen eigenen Platz (inkl. dessen Bewertungen/Meldungen).
+  Future<void> deletePlace(String id) async {
+    await _session.ensureSignedIn();
+    try {
+      await _client.rpc<void>('delete_community_place', params: {'p_id': id});
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
   /// Zieht den 'raise exception <code>'-Text aus der Postgres-Fehlermeldung.
   static String _extractCode(String message) {
     // Spezifischere Codes zuerst: 'geo_rate_limit' enthaelt 'rate_limit'.
@@ -145,6 +210,7 @@ class CommunityRepository {
       'bad_coords',
       'name_too_long',
       'hint_too_long',
+      'not_owner_or_missing',
     ]) {
       if (message.contains(code)) return code;
     }

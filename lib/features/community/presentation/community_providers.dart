@@ -45,3 +45,10 @@ final mergedPlacesProvider = FutureProvider.family<List<ChangingPlace>, BBox>((
   }
   return mergePlaces(osm: osm, community: community);
 });
+
+/// Laedt die eigenen Community-Plaetze fuer den "Meine Pins"-Screen.
+final myPlacesProvider = FutureProvider<List<ChangingPlace>>((ref) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return const [];
+  return repo.myPlaces();
+});
