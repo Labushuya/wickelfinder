@@ -80,8 +80,14 @@ jobs:
       - name: App-Icons generieren (Adaptive + Legacy)
         run: dart run flutter_launcher_icons
 
+      # Supabase-Zugang wird zur Build-Zeit einkompiliert (--dart-define).
+      # Werte aus GitHub-Secrets; anon-key ist client-safe (RLS schuetzt die DB).
       - name: Release-APK bauen
-        run: flutter build apk --release --build-name=${GITHUB_REF_NAME#v}
+        run: |
+          flutter build apk --release \
+            --build-name=${GITHUB_REF_NAME#v} \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: APK umbenennen (mit Version)
         run: |
