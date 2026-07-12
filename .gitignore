@@ -51,10 +51,11 @@ app.*.map.json
 *.jks
 *.keystore
 
-# Brand: temporäre Build-Artefakte (nur SVG-Quellen + Brief werden versioniert)
-brand/*.png
+# Brand: lokale Tool-Artefakte NICHT versionieren.
+# Versioniert werden: SVG-Quellen, brand/render/*.png (Icon-Inputs für CI) und der Brief.
 brand/node_modules/
 brand/package*.json
+brand/*.png
 
 # Umgebung / Secrets
 .env

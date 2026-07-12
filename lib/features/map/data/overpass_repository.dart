@@ -20,10 +20,11 @@ class OverpassException implements Exception {
 /// User-Agent (Overpass-Etikette).
 class OverpassRepository {
   OverpassRepository({http.Client? client, this.endpoint = _defaultEndpoint})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   static const _defaultEndpoint = 'https://overpass-api.de/api/interpreter';
-  static const _userAgent = 'Wickelfinder/0.1 (+https://github.com/Labushuya/wickelfinder)';
+  static const _userAgent =
+      'Wickelfinder/0.1 (+https://github.com/Labushuya/wickelfinder)';
 
   final http.Client _client;
   final String endpoint;

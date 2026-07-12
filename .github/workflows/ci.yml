@@ -22,6 +22,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.35.5
           cache: true
 
       - name: Flutter-Version
@@ -35,6 +36,28 @@ jobs:
 
       - name: Static Analysis (Gate)
         run: flutter analyze --fatal-infos
+
+      # Brand-Assets prüfen: SVG-Quellen wohlgeformt + committete Icon-PNGs vorhanden.
+      # Nur python3 (stdlib, garantiert auf ubuntu-latest) – kein Rastern, kein apt.
+      - name: Brand-Assets validieren (Gate)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, os, xml.etree.ElementTree as ET
+          svgs = glob.glob("brand/**/*.svg", recursive=True)
+          assert svgs, "keine SVGs unter brand/ gefunden"
+          for f in sorted(svgs):
+              root = ET.parse(f).getroot()          # wirft bei fehlerhaftem XML
+              assert root.tag.endswith("svg"), f"{f}: root ist kein <svg>"
+          required_png = [
+              "brand/render/foreground.png",
+              "brand/render/background.png",
+              "brand/render/monochrome.png",
+          ]
+          for p in required_png:
+              assert os.path.exists(p) and os.path.getsize(p) > 0, f"{p} fehlt oder ist leer"
+          print(f"OK: {len(svgs)} SVG(s) wohlgeformt, {len(required_png)} Icon-PNG(s) vorhanden")
+          PY
 
       - name: Tests mit Coverage (Gate)
         run: flutter test --coverage

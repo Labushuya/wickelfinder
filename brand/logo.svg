@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Wickelfinder – Wickelplatz-Finder Logo">
+  <title>Wickelfinder</title>
+  <desc>Standort-Pin in Indigo mit einer gefalteten Stoffwindel (Dreieck) und Sicherheitsnadel in soft Rosé.</desc>
+  <defs>
+    <linearGradient id="pinGrad" x1="140" y1="70" x2="372" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5B5BD6"/>
+      <stop offset="1" stop-color="#4340B8"/>
+    </linearGradient>
+    <linearGradient id="tipShade" x1="256" y1="300" x2="256" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4340B8" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3A37A0" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ============ PIN-KÖRPER (Tropfenform) ============ -->
+  <path id="pinBody" d="M256 40
+           C 154 40 72 122 72 224
+           C 72 312 140 372 232 462
+           C 244 474 268 474 280 462
+           C 372 372 440 312 440 224
+           C 440 122 358 40 256 40 Z"
+        fill="url(#pinGrad)"/>
+  <use href="#pinBody" fill="url(#tipShade)"/>
+
+  <!-- ============ WINDEL (gefaltetes Dreieck, Spitze unten) ============ -->
+  <!-- Klassische gefaltete Stoffwindel: breites Band oben, Spitze zeigt nach unten.
+       Zentriert um Pin-Kopf (256,214). Runde Ecken = weicher Stoff. -->
+  <g>
+    <!-- Windel-Dreieck: obere Kante (150..362), Spitze bei (256, 322) -->
+    <path d="M158 158
+             Q 152 156 152 168
+             L 250 312
+             Q 256 320 262 312
+             L 360 168
+             Q 360 156 354 158
+             L 256 176
+             Q 256 176 158 158 Z"
+          fill="#F6D9E4"/>
+    <!-- zentrale Umschlagfalte (dezenter Schatten, symmetrisch zur Spitze) -->
+    <path d="M256 176 L 250 312 Q 256 320 262 312 Z"
+          fill="#E8A0BF" opacity="0.30"/>
+    <!-- oberes Windelband (gefalteter Bund) -->
+    <path d="M150 150
+             Q 256 132 362 150
+             L 358 176
+             Q 256 158 154 176 Z"
+          fill="#E8A0BF"/>
+  </g>
+
+  <!-- ============ SICHERHEITSNADEL (horizontal über dem Windelband) ============ -->
+  <g fill="none" stroke="#E8A0BF" stroke-linecap="round">
+    <!-- gerader Draht -->
+    <line x1="190" y1="206" x2="322" y2="206" stroke-width="15"/>
+    <!-- umgebogene Spitze links (Feder) -->
+    <path d="M190 206 C 172 206 172 228 190 228 L 216 228" stroke-width="15"/>
+    <!-- Verschlusskopf rechts (Öse) -->
+    <circle cx="326" cy="206" r="19" fill="#E8A0BF" stroke="none"/>
+    <circle cx="326" cy="206" r="7.5" fill="#FBFAFF" stroke="none"/>
+  </g>
+</svg>

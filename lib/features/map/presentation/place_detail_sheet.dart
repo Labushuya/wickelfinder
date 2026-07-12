@@ -17,10 +17,7 @@ class PlaceDetailSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            place.name ?? 'Wickelplatz',
-            style: theme.textTheme.titleLarge,
-          ),
+          Text(place.name ?? 'Wickelplatz', style: theme.textTheme.titleLarge),
           const SizedBox(height: 12),
           if (place.locationHint != null)
             _InfoRow(icon: Icons.place_outlined, label: place.locationHint!),

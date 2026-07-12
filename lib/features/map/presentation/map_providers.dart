@@ -35,8 +35,10 @@ class BBox {
 
 /// Lädt die Wickelplätze für die gegebene [BBox].
 /// `family` erlaubt getrenntes Caching pro Kartenausschnitt.
-final placesProvider =
-    FutureProvider.family<List<ChangingPlace>, BBox>((ref, bbox) async {
+final placesProvider = FutureProvider.family<List<ChangingPlace>, BBox>((
+  ref,
+  bbox,
+) async {
   final repo = ref.watch(overpassRepositoryProvider);
   return repo.fetchInBoundingBox(
     south: bbox.south,

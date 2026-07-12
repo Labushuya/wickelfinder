@@ -101,10 +101,6 @@ class _PinIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Icon(
-      Icons.location_on,
-      color: AppColors.primary,
-      size: 40,
-    );
+    return const Icon(Icons.location_on, color: AppColors.primary, size: 40);
   }
 }

@@ -75,10 +75,10 @@ class ChangingPlace {
   }
 
   static bool? _yesNo(String? v) => switch (v) {
-        'yes' => true,
-        'no' => false,
-        _ => null,
-      };
+    'yes' => true,
+    'no' => false,
+    _ => null,
+  };
 }
 
 enum PlaceSource { osm, community }
