@@ -22,7 +22,7 @@ Widget _sheet(ChangingPlace place) => ProviderScope(
 );
 
 void main() {
-  testWidgets('MapScreen rendert AppBar-Titel "Wickelfinder"', (tester) async {
+  testWidgets('MapScreen zeigt die Adress-Suchleiste', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -33,8 +33,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Wickelfinder'), findsOneWidget);
-    expect(find.byIcon(Icons.refresh), findsOneWidget);
+    expect(find.text('Adresse oder Ort suchen …'), findsOneWidget);
+    expect(find.byIcon(Icons.my_location), findsOneWidget);
   });
 
   testWidgets('PlaceDetailSheet zeigt Name und Infozeilen', (tester) async {
