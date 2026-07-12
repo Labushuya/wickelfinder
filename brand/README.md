@@ -7,13 +7,22 @@ ist [`DESIGN-BRIEF.md`](DESIGN-BRIEF.md).
 
 | Datei | Zweck |
 |---|---|
-| `logo.svg` | **Master-Bildmarke** (freigestellt) — Standort-Pin mit gefalteter Windel + Sicherheitsnadel |
+| `logo.svg` | **Master-Bildmarke** (freigestellt) — Standort-Pin mit sitzendem Baby, weiße Windel |
 | `app-icon-foreground.svg` | Adaptive-Icon **Vordergrund**, Motiv in zentraler 66 %-Safe-Zone, transparente Ränder |
 | `app-icon-background.svg` | Adaptive-Icon **Hintergrund**, full-bleed (surface → accent-soft) |
 | `app-icon-monochrome.svg` | **Einfarbige** Silhouette für Android-13-Themed-Icons & Wasserzeichen |
 | `render/*.png` | Gerenderte 1024²-PNGs — **versioniert**, dienen als Input für `flutter_launcher_icons` |
 | `render/preview.png` | App-Icon-Vorschau (Vordergrund über Hintergrund) |
 | `render.mjs` | Renderskript (SVG → PNG via `sharp`) |
+
+## Motiv & Lizenz
+
+Die Bildmarke ist **vollständig eigenständig gezeichnet** (eigene SVG-Pfade): ein Standort-Pin
+(Tropfenkontur) mit einem sitzenden Baby im Kopf. Der **Windelbereich** (Becken/Schritt) ist in
+**Weiß** hervorgehoben und hebt sich minimal vom soft-Rosé des Babys ab.
+
+> Keine Fremd-Icons, **keine Font-Awesome-/CC-BY-Bindung** — die Grafik unterliegt der
+> Projektlizenz (siehe `../LICENSE`). Frei nutz- und veränderbar ohne Attributionspflicht Dritter.
 
 ## Farbpalette „Sanft & modern"
 

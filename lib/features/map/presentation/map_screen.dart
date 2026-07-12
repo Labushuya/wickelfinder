@@ -56,16 +56,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           ),
         ],
       ),
-      floatingActionButton: placesAsync.isLoading
-          ? const FloatingActionButton(
-              onPressed: null,
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          : null,
+      floatingActionButton:
+          placesAsync.isLoading
+              ? const FloatingActionButton(
+                onPressed: null,
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+              : null,
     );
   }
 
