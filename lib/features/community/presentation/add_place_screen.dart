@@ -4,16 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../map/domain/changing_place.dart';
 import '../data/community_repository.dart';
 import 'community_providers.dart';
 
-/// Screen zum Hinzufuegen eines neuen Wickelplatzes.
+/// Screen zum Hinzufuegen ODER Bearbeiten eines Wickelplatzes.
 /// Der Nutzer verschiebt die Karte, bis das zentrale Fadenkreuz auf dem Ort
-/// liegt, und ergaenzt optionale Angaben.
+/// liegt, und ergaenzt optionale Angaben. Ist [editPlace] gesetzt, werden die
+/// Felder vorbefuellt und beim Speichern der Platz aktualisiert.
 class AddPlaceScreen extends ConsumerStatefulWidget {
-  const AddPlaceScreen({super.key, required this.initialCenter});
+  const AddPlaceScreen({
+    super.key,
+    required this.initialCenter,
+    this.editPlace,
+  });
 
   final LatLng initialCenter;
+
+  /// Wenn gesetzt: Bearbeiten-Modus fuer diesen eigenen Platz.
+  final ChangingPlace? editPlace;
+
+  bool get isEdit => editPlace != null;
 
   @override
   ConsumerState<AddPlaceScreen> createState() => _AddPlaceScreenState();
@@ -21,13 +32,17 @@ class AddPlaceScreen extends ConsumerStatefulWidget {
 
 class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
   final _mapController = MapController();
-  final _nameController = TextEditingController();
-  final _hintController = TextEditingController();
-  bool? _wheelchair;
-  bool? _fee;
+  late final _nameController = TextEditingController(
+    text: widget.editPlace?.name ?? '',
+  );
+  late final _hintController = TextEditingController(
+    text: widget.editPlace?.locationHint ?? '',
+  );
+  late bool? _wheelchair = widget.editPlace?.wheelchairAccessible;
+  late bool? _fee = widget.editPlace?.fee;
   bool _saving = false;
 
-  late LatLng _center = widget.initialCenter;
+  late LatLng _center = widget.editPlace?.location ?? widget.initialCenter;
 
   @override
   void dispose() {
@@ -39,7 +54,11 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Wickelplatz hinzufügen')),
+      appBar: AppBar(
+        title: Text(
+          widget.isEdit ? 'Wickelplatz bearbeiten' : 'Wickelplatz hinzufügen',
+        ),
+      ),
       body: Column(
         children: [
           // Karte mit fixiertem Fadenkreuz in der Mitte.
@@ -51,7 +70,7 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
                 FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: widget.initialCenter,
+                    initialCenter: _center,
                     initialZoom: 16,
                     onPositionChanged: (pos, _) =>
                         _center = pos.center ?? _center,
@@ -143,22 +162,37 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     setState(() => _saving = true);
+
+    String? emptyToNull(String s) => s.trim().isEmpty ? null : s.trim();
+
     try {
-      await repo.addPlace(
-        lat: _center.latitude,
-        lon: _center.longitude,
-        name: _nameController.text.trim().isEmpty
-            ? null
-            : _nameController.text.trim(),
-        locationHint: _hintController.text.trim().isEmpty
-            ? null
-            : _hintController.text.trim(),
-        wheelchair: _wheelchair,
-        fee: _fee,
-      );
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Platz hinzugefügt. Danke!')),
-      );
+      final edit = widget.editPlace;
+      if (edit != null) {
+        await repo.updatePlace(
+          id: edit.id,
+          lat: _center.latitude,
+          lon: _center.longitude,
+          name: emptyToNull(_nameController.text),
+          locationHint: emptyToNull(_hintController.text),
+          wheelchair: _wheelchair,
+          fee: _fee,
+        );
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Platz aktualisiert.')),
+        );
+      } else {
+        await repo.addPlace(
+          lat: _center.latitude,
+          lon: _center.longitude,
+          name: emptyToNull(_nameController.text),
+          locationHint: emptyToNull(_hintController.text),
+          wheelchair: _wheelchair,
+          fee: _fee,
+        );
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Platz hinzugefügt. Danke!')),
+        );
+      }
       navigator.pop(true);
     } on CommunityException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));

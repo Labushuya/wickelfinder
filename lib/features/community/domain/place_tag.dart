@@ -19,4 +19,16 @@ enum PlaceTag {
 
   /// Anzeige-Label (Deutsch).
   final String label;
+
+  /// Der sich gegenseitig ausschliessende Gegen-Tag, falls vorhanden.
+  /// Wird beim Auswaehlen automatisch abgewaehlt (kein Widerspruch moeglich).
+  PlaceTag? get opposite => switch (this) {
+    freeOfCharge => paid,
+    paid => freeOfCharge,
+    disposal => noDisposal,
+    noDisposal => disposal,
+    largeSurface => cramped,
+    cramped => largeSurface,
+    _ => null,
+  };
 }

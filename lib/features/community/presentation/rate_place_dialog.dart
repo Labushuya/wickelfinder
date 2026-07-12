@@ -104,9 +104,16 @@ class _RatePlaceDialogState extends State<RatePlaceDialog> {
                       FilterChip(
                         label: Text(tag.label),
                         selected: _tags.contains(tag),
-                        onSelected: (sel) => setState(
-                          () => sel ? _tags.add(tag) : _tags.remove(tag),
-                        ),
+                        onSelected: (sel) => setState(() {
+                          if (sel) {
+                            _tags.add(tag);
+                            // Widerspruch aufloesen: Gegen-Tag abwaehlen.
+                            final opp = tag.opposite;
+                            if (opp != null) _tags.remove(opp);
+                          } else {
+                            _tags.remove(tag);
+                          }
+                        }),
                       ),
                   ],
                 ),
