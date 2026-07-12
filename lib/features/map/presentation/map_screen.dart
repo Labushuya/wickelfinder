@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../search/presentation/address_search_bar.dart';
+import '../../updater/presentation/update_sheet.dart';
 import '../domain/changing_place.dart';
 import 'map_providers.dart';
 import 'place_detail_sheet.dart';
@@ -30,13 +31,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   BBox _bbox = BBox.berlin;
   Timer? _bboxDebounce;
 
+  /// Zuletzt erfolgreich geladene Plaetze. Bleiben sichtbar, waehrend eine neue
+  /// BBox laedt -> kein Leerflackern der Pins beim Wischen.
+  List<ChangingPlace> _lastPlaces = const [];
+
   @override
   void initState() {
     super.initState();
     // Nach dem ersten Frame: einmalig versuchen, auf den Standort zu zentrieren.
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _goToMyLocation(initial: true),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _goToMyLocation(initial: true);
+      // Stiller Auto-Update-Check (zeigt nur bei neuer Version ein Sheet).
+      UpdateSheet.checkAndShow(context, ref);
+    });
   }
 
   @override
@@ -48,6 +55,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final placesAsync = ref.watch(mergedPlacesProvider(_bbox));
+    // Neue Daten uebernehmen, sobald da; sonst die letzten behalten.
+    final places = placesAsync.valueOrNull;
+    if (places != null) _lastPlaces = places;
     final hasBackend = ref.watch(communityRepositoryProvider) != null;
 
     return Scaffold(
@@ -66,7 +76,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'de.wickelfinder.app',
               ),
-              MarkerLayer(markers: _buildMarkers(placesAsync)),
+              MarkerLayer(markers: _buildMarkers()),
               const SafeArea(
                 top: false,
                 minimum: EdgeInsets.only(right: 8, bottom: 8),
@@ -78,11 +88,41 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ],
           ),
-          // Suchleiste oben, im sicheren Bereich.
+          // Suchleiste oben, im sicheren Bereich, mit Menue.
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: AddressSearchBar(onSelected: _goTo),
+              child: Row(
+                children: [
+                  Expanded(child: AddressSearchBar(onSelected: _goTo)),
+                  const SizedBox(width: 8),
+                  Material(
+                    elevation: 3,
+                    shape: const CircleBorder(),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (v) {
+                        if (v == 'update') {
+                          UpdateSheet.checkAndShow(context, ref, manual: true);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'update',
+                          child: Row(
+                            children: [
+                              Icon(Icons.system_update, size: 20),
+                              SizedBox(width: 10),
+                              Text('Nach Updates suchen'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           if (placesAsync.isLoading)
@@ -120,10 +160,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   void _scheduleBBoxUpdate() {
     _bboxDebounce?.cancel();
-    _bboxDebounce = Timer(const Duration(milliseconds: 600), _updateBBox);
+    // Laenger warten -> nicht bei jedem Mini-Wisch neu laden.
+    _bboxDebounce = Timer(const Duration(milliseconds: 900), _updateBBox);
   }
 
   void _updateBBox() {
+    if (!mounted) return;
     final bounds = _mapController.camera.visibleBounds;
     final next = BBox(
       south: bounds.south,
@@ -131,12 +173,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       north: bounds.north,
       east: bounds.east,
     );
-    if (mounted) setState(() => _bbox = next);
+    // Nur neu laden, wenn sich der Ausschnitt WESENTLICH verschoben hat
+    // (Mitte > ~30% der aktuellen Breite/Hoehe). Verhindert Dauer-Reloads.
+    if (!_bboxChangedSignificantly(_bbox, next)) return;
+    setState(() => _bbox = next);
+  }
+
+  static bool _bboxChangedSignificantly(BBox a, BBox b) {
+    final latSpan = (a.north - a.south).abs();
+    final lonSpan = (a.east - a.west).abs();
+    final centerLatMoved = (((a.north + a.south) - (b.north + b.south)) / 2)
+        .abs();
+    final centerLonMoved = (((a.east + a.west) - (b.east + b.west)) / 2).abs();
+    final zoomChanged =
+        ((latSpan - (b.north - b.south).abs()).abs() > latSpan * 0.25);
+    return zoomChanged ||
+        centerLatMoved > latSpan * 0.3 ||
+        centerLonMoved > lonSpan * 0.3;
   }
 
   void _goTo(LatLng target, {double zoom = 15}) {
+    // move() loest onPositionChanged aus -> _scheduleBBoxUpdate laedt nach.
     _mapController.move(target, zoom);
-    _updateBBox();
   }
 
   Future<void> _goToMyLocation({bool initial = false}) async {
@@ -154,10 +212,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   // --- Marker / Detail / Hinzufuegen ---------------------------------------
 
-  List<Marker> _buildMarkers(AsyncValue<List<ChangingPlace>> async) {
-    final places = async.valueOrNull ?? const [];
+  List<Marker> _buildMarkers() {
     return [
-      for (final place in places)
+      for (final place in _lastPlaces)
         Marker(
           point: place.location,
           width: 44,

@@ -6,6 +6,7 @@ import '../../community/domain/place_stats.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/rate_place_dialog.dart';
 import '../domain/changing_place.dart';
+import '../domain/venue_context.dart';
 
 /// Bottom-Sheet mit Details zu einem Wickelplatz inkl. Community-Bewertung.
 class PlaceDetailSheet extends ConsumerWidget {
@@ -30,6 +31,8 @@ class PlaceDetailSheet extends ConsumerWidget {
           const SizedBox(height: 8),
           _RatingSummary(stats: stats),
           const SizedBox(height: 12),
+          _AccessibilityBanner(place: place),
+          const SizedBox(height: 4),
           if (place.locationHint != null)
             _InfoRow(icon: Icons.place_outlined, label: place.locationHint!),
           if (place.wheelchairAccessible != null)
@@ -38,11 +41,6 @@ class PlaceDetailSheet extends ConsumerWidget {
               label: place.wheelchairAccessible!
                   ? 'Barrierefrei zugänglich'
                   : 'Nicht barrierefrei',
-            ),
-          if (place.fee != null)
-            _InfoRow(
-              icon: Icons.euro_outlined,
-              label: place.fee! ? 'Kostenpflichtig' : 'Kostenlos',
             ),
           _InfoRow(
             icon: Icons.source_outlined,
@@ -151,6 +149,55 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(child: Text(label)),
         ],
+      ),
+    );
+  }
+}
+
+/// Kombinierte Zugaenglichkeits-Einschaetzung: Kontext (Schwimmbad/Restaurant/…)
+/// + Kosten. Beantwortet "komme ich hier ohne Weiteres rein?".
+class _AccessibilityBanner extends StatelessWidget {
+  const _AccessibilityBanner({required this.place});
+  final ChangingPlace place;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ctx = place.venueContext;
+    final parts = <String>['${ctx.emoji} ${ctx.label}'];
+
+    // Kosten-Aussage, ggf. mit Kontext-Hinweis.
+    if (place.fee == true) {
+      parts.add(
+        ctx.accessRestricted
+            ? '💶 kostenpflichtig (Eintritt)'
+            : '💶 kostenpflichtig',
+      );
+    } else if (place.fee == false) {
+      parts.add('✅ kostenlos');
+    } else if (ctx.accessRestricted) {
+      // fee unbekannt, aber Ort setzt typischerweise Eintritt/Konsum voraus.
+      parts.add('ℹ️ evtl. Eintritt/Konsum');
+    }
+
+    final restricted = ctx.accessRestricted || place.fee == true;
+    final bg = restricted
+        ? theme.colorScheme.tertiaryContainer
+        : theme.colorScheme.secondaryContainer;
+    final fg = restricted
+        ? theme.colorScheme.onTertiaryContainer
+        : theme.colorScheme.onSecondaryContainer;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        parts.join('  ·  '),
+        style: theme.textTheme.bodyMedium?.copyWith(color: fg),
       ),
     );
   }

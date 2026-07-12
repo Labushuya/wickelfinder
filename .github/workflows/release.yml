@@ -69,6 +69,9 @@ jobs:
           }
           add_perm INTERNET
           add_perm ACCESS_NETWORK_STATE
+          add_perm ACCESS_FINE_LOCATION
+          add_perm ACCESS_COARSE_LOCATION
+          add_perm REQUEST_INSTALL_PACKAGES
           echo '--- uses-permission im Release-Manifest ---'
           grep 'uses-permission' "$MANIFEST"
           # fail-fast: bricht den Build ab, falls der Inject nicht griff
