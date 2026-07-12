@@ -49,7 +49,7 @@ returns text
 language plpgsql security definer set search_path = '' as $$
 declare
   uid uuid := auth.uid();
-  g   geography;
+  g   extensions.geography;
   new_id uuid;
 begin
   if uid is null then raise exception 'auth_required'; end if;
@@ -61,7 +61,7 @@ begin
   if p_name is not null and char_length(p_name) > 80 then raise exception 'name_too_long'; end if;
   if p_hint is not null and char_length(p_hint) > 200 then raise exception 'hint_too_long'; end if;
 
-  g := ST_SetSRID(ST_MakePoint(p_lon, p_lat), 4326)::geography;
+  g := extensions.ST_SetSRID(extensions.ST_MakePoint(p_lon, p_lat), 4326)::extensions.geography;
 
   -- Rate-Limit: max 5 Plaetze/Stunde pro Nutzer.
   if (select count(*) from public.community_places
@@ -73,13 +73,13 @@ begin
   if exists (select 1 from public.community_places
              where created_by = uid
                and created_at > now() - interval '1 day'
-               and ST_DWithin(geom, g, 150)) then
+               and extensions.ST_DWithin(geom, g, 150)) then
     raise exception 'geo_rate_limit';
   end if;
 
   -- Globaler Cluster-Cap: max 10 Plaetze aller Nutzer im 150m-Radius.
   if (select count(*) from public.community_places
-      where ST_DWithin(geom, g, 150)) >= 10 then
+      where extensions.ST_DWithin(geom, g, 150)) >= 10 then
     raise exception 'geo_cluster_cap';
   end if;
 
