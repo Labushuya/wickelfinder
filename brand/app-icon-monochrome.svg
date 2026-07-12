@@ -1,25 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Wickelfinder Icon einfarbig">
   <title>Wickelfinder – Monochrome</title>
-  <desc>Einfarbige Silhouette (Pin mit ausgestanzter Windel + Nadel) für Android-13-Themed-Icons und Wasserzeichen. currentColor, transparenter Hintergrund.</desc>
+  <desc>Einfarbige Silhouette: Pin mit ausgestanztem sitzenden Baby. currentColor, transparenter Hintergrund. Für Android-13-Themed-Icons und Wasserzeichen. Eigenständige Grafik.</desc>
   <defs>
-    <!-- Maske: weiß = sichtbar, schwarz = ausgestanzt. Windel + Nadel werden aus dem Pin gestanzt. -->
     <mask id="knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <g transform="translate(512,512) scale(1.30) translate(-256,-257)">
-        <!-- Pin voll sichtbar -->
-        <path fill="#fff" d="M256 40 C 154 40 72 122 72 224 C 72 312 140 372 232 462 C 244 474 268 474 280 462 C 372 372 440 312 440 224 C 440 122 358 40 256 40 Z"/>
-        <!-- Windel-Dreieck ausstanzen -->
-        <path fill="#000" d="M158 158 Q 152 156 152 168 L 250 312 Q 256 320 262 312 L 360 168 Q 360 156 354 158 L 256 176 Q 256 176 158 158 Z"/>
-        <!-- oberes Band ausstanzen -->
-        <path fill="#000" d="M150 150 Q 256 132 362 150 L 358 176 Q 256 158 154 176 Z"/>
-        <!-- Sicherheitsnadel als sichtbare Brücke wieder einzeichnen (weiß) über der Windel -->
-        <g fill="none" stroke="#fff" stroke-linecap="round">
-          <line x1="190" y1="206" x2="322" y2="206" stroke-width="15"/>
-          <path d="M190 206 C 172 206 172 228 190 228 L 216 228" stroke-width="15"/>
+      <g transform="translate(512,512) scale(1.28) translate(-256,-256)">
+        <!-- Pin sichtbar (weiß) -->
+        <g transform="translate(73.6,6) scale(0.95)">
+          <path fill="#fff" d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z"/>
+        </g>
+        <!-- Baby ausstanzen (schwarz) -->
+        <g transform="translate(256,188) scale(0.54) translate(-256,-256)">
+          <circle cx="256" cy="116" r="62" fill="#000"/>
+          <path fill="#000" d="M256 250 C 196 250 150 226 120 190 C 104 172 104 146 126 140 C 144 135 158 150 176 164 C 198 180 226 190 256 190 C 286 190 314 180 336 164 C 354 150 368 135 386 140 C 408 146 408 172 392 190 C 362 226 316 250 256 250 Z"/>
+          <path fill="#000" d="M196 198 Q 256 208 316 198 L 322 300 Q 256 292 190 300 Z"/>
+          <path fill="#000" d="M214 298 C 176 306 158 356 176 404 C 186 430 226 424 224 396 C 222 360 232 328 256 314 Z"/>
+          <path fill="#000" d="M298 298 C 336 306 354 356 336 404 C 326 430 286 424 288 396 C 290 360 280 328 256 314 Z"/>
         </g>
       </g>
     </mask>
   </defs>
-
-  <!-- Eine Farbe via currentColor (Standard: ink #2A2A40). Themed-Icon-System tint überschreibt. -->
   <rect x="0" y="0" width="1024" height="1024" fill="currentColor" color="#2A2A40" mask="url(#knockout)"/>
 </svg>

@@ -26,9 +26,8 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: brightness == Brightness.light
-          ? AppColors.surface
-          : null,
+      scaffoldBackgroundColor:
+          brightness == Brightness.light ? AppColors.surface : null,
       appBarTheme: const AppBarTheme(centerTitle: true),
     );
   }
