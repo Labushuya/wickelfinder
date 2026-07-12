@@ -18,8 +18,8 @@ dependencies:
   # Karte auf OpenStreetMap-Tiles, kein API-Key nötig
   flutter_map: 6.1.0
   latlong2: 0.9.1
-  # HTTP für Overpass API
-  http: 1.2.1
+  # HTTP für Overpass API (>=1.2.2 wg. supabase_flutter)
+  http: 1.6.0
   # Standortbestimmung (on-device, DSGVO-schonend)
   geolocator: 12.0.0
   # Community-Backend: Postgres + anonyme Auth + REST. Session persistiert intern.
