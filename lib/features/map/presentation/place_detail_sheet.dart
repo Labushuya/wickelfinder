@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../community/data/community_repository.dart';
 import '../../community/domain/place_stats.dart';
+import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/rate_place_dialog.dart';
 import '../domain/changing_place.dart';
@@ -19,6 +20,15 @@ class PlaceDetailSheet extends ConsumerWidget {
     final repo = ref.watch(communityRepositoryProvider);
     final statsAsync = ref.watch(statsProvider(place.placeRef));
     final stats = statsAsync.valueOrNull ?? PlaceStats.empty(place.placeRef);
+
+    // Ist dies ein eigener Community-Pin? -> Bearbeiten/Loeschen anbieten.
+    final isOwn =
+        place.source == PlaceSource.community &&
+        (ref
+                .watch(myPlacesProvider)
+                .valueOrNull
+                ?.any((p) => p.id == place.id) ??
+            false);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -57,10 +67,88 @@ class PlaceDetailSheet extends ConsumerWidget {
                 onPressed: () => _rate(context, ref, repo),
               ),
             ),
+            if (isOwn) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Bearbeiten'),
+                      onPressed: () => _edit(context, ref),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Löschen'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                      ),
+                      onPressed: () => _delete(context, ref, repo),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _edit(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    navigator.pop(); // Detail-Sheet schliessen
+    final changed = await navigator.push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            AddPlaceScreen(initialCenter: place.location, editPlace: place),
+      ),
+    );
+    if (changed ?? false) {
+      ref.invalidate(myPlacesProvider);
+    }
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    CommunityRepository repo,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Platz löschen?'),
+        content: Text(
+          '„${place.name ?? 'Wickelplatz'}" wird endgültig entfernt.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await repo.deletePlace(place.id);
+      ref.invalidate(myPlacesProvider);
+      navigator.pop(); // Detail-Sheet schliessen
+      messenger.showSnackBar(const SnackBar(content: Text('Platz gelöscht.')));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Löschen fehlgeschlagen.')),
+      );
+    }
   }
 
   Future<void> _rate(
