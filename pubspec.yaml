@@ -18,11 +18,11 @@ dependencies:
   # Karte auf OpenStreetMap-Tiles, kein API-Key nötig
   flutter_map: 6.1.0
   latlong2: 0.9.1
-  # Offline-Kachel-Cache fuer flutter_map (persistenter Datei-Store via dio)
+  # Offline-Kachel-Cache fuer flutter_map (persistenter Datei-Store)
   flutter_map_cache: 2.1.0
   dio: 5.10.0
   dio_cache_interceptor: 4.0.7
-  dio_cache_interceptor_file_store: 1.2.3
+  http_cache_file_store: 2.0.2
   # HTTP für Overpass API (>=1.2.2 wg. supabase_flutter)
   http: 1.6.0
   # Standortbestimmung (on-device, DSGVO-schonend)
