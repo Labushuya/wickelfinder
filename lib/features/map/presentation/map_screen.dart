@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/location/location_service.dart';
+import '../../../core/map/tile_cache.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/settings_screen.dart';
 import '../../../core/theme/theme_controller.dart';
@@ -109,6 +110,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'de.wickelfinder.app',
+                tileProvider: TileCache.instanceOrNull()?.provider(),
               ),
               MarkerLayer(markers: _buildMarkers(accumulated.all)),
             ],
