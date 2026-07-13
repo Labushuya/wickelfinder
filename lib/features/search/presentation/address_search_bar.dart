@@ -16,9 +16,13 @@ final geocodingRepositoryProvider = Provider<GeocodingRepository>((ref) {
 /// Adress-/Ortssuchleiste mit Live-Vorschlaegen (debounced Nominatim).
 /// Bei Auswahl eines Treffers wird [onSelected] mit der Zielkoordinate gerufen.
 class AddressSearchBar extends ConsumerStatefulWidget {
-  const AddressSearchBar({super.key, required this.onSelected});
+  const AddressSearchBar({super.key, required this.onSelected, this.trailing});
 
   final void Function(LatLng target) onSelected;
+
+  /// Optionales Widget rechts in der Suchleiste (z. B. das 3-Punkt-Menue),
+  /// solange kein Suchtext eingegeben ist.
+  final Widget? trailing;
 
   @override
   ConsumerState<AddressSearchBar> createState() => _AddressSearchBarState();
@@ -96,7 +100,7 @@ class _AddressSearchBarState extends ConsumerState<AddressSearchBar> {
                               setState(() => _suggestions = const []);
                             },
                           )
-                        : null),
+                        : widget.trailing),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(28),
                 borderSide: BorderSide.none,
