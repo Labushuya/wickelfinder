@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/supabase/supabase_init.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'features/map/presentation/map_screen.dart';
 
 Future<void> main() async {
@@ -13,16 +14,18 @@ Future<void> main() async {
   runApp(const ProviderScope(child: WickelfinderApp()));
 }
 
-class WickelfinderApp extends StatelessWidget {
+class WickelfinderApp extends ConsumerWidget {
   const WickelfinderApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
       title: 'Wickelfinder',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       home: const MapScreen(),
     );
   }
