@@ -34,7 +34,7 @@ abstract final class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: surfaceColor,
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         centerTitle: true,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
@@ -64,7 +64,7 @@ abstract final class AppTheme {
         color: surfaceColor,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: TextStyle(color: AppColors.ink),
+        textStyle: const TextStyle(color: AppColors.ink),
       ),
       // Bottom-Sheets (Detail, Bewerten) abgerundet, Markenflaeche.
       bottomSheetTheme: BottomSheetThemeData(
