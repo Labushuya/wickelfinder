@@ -105,6 +105,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: AddressSearchBar(
@@ -113,7 +114,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  _ThemeToggleButton(),
+                  // Toggle exakt auf Hoehe der Suchleisten-Pille halten.
+                  SizedBox(
+                    height: 56,
+                    child: Center(child: _ThemeToggleButton()),
+                  ),
                 ],
               ),
             ),
@@ -317,14 +322,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (group.length == 1) {
         markers.add(_pinMarker(group.first));
       } else {
-        // Cluster-Mittelpunkt = Durchschnitt.
+        // Cluster sitzt am Durchschnittspunkt, zoomt aber beim Tippen auf die
+        // Bounding-Box ALLER enthaltenen Pins (nicht auf den Durchschnitt) —
+        // so landet man nie "im Nirgendwo".
         final lat =
             group.map((p) => p.location.latitude).reduce((a, b) => a + b) /
             group.length;
         final lon =
             group.map((p) => p.location.longitude).reduce((a, b) => a + b) /
             group.length;
-        markers.add(_clusterMarker(LatLng(lat, lon), group.length));
+        markers.add(_clusterMarker(LatLng(lat, lon), group));
       }
     }
     return markers;
@@ -340,12 +347,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     ),
   );
 
-  Marker _clusterMarker(LatLng point, int count) => Marker(
+  Marker _clusterMarker(LatLng point, List<ChangingPlace> members) => Marker(
     point: point,
     width: 44,
     height: 44,
     child: GestureDetector(
-      onTap: () => _goTo(point, zoom: math.min(_zoom + 3, 17)),
+      onTap: () => _zoomToCluster(members),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.primary,
@@ -354,7 +361,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
         alignment: Alignment.center,
         child: Text(
-          count > 99 ? '99+' : '$count',
+          members.length > 99 ? '99+' : '${members.length}',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -364,6 +371,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
     ),
   );
+
+  /// Zoomt sanft auf die Bounding-Box aller Pins eines Clusters.
+  void _zoomToCluster(List<ChangingPlace> members) {
+    if (members.isEmpty) return;
+    if (members.length == 1) {
+      _mapController.move(members.first.location, math.min(_zoom + 3, 17));
+      return;
+    }
+    var south = members.first.location.latitude;
+    var north = south;
+    var west = members.first.location.longitude;
+    var east = west;
+    for (final m in members) {
+      south = math.min(south, m.location.latitude);
+      north = math.max(north, m.location.latitude);
+      west = math.min(west, m.location.longitude);
+      east = math.max(east, m.location.longitude);
+    }
+    final bounds = LatLngBounds(LatLng(south, west), LatLng(north, east));
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.all(64),
+        maxZoom: 17,
+      ),
+    );
+  }
 
   void _showDetail(ChangingPlace place) {
     unawaited(

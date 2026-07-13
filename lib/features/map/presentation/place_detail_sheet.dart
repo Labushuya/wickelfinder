@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../community/data/community_repository.dart';
+import '../../admin/data/auth_repository.dart';
 import '../../community/domain/place_stats.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
@@ -21,14 +22,16 @@ class PlaceDetailSheet extends ConsumerWidget {
     final statsAsync = ref.watch(statsProvider(place.placeRef));
     final stats = statsAsync.valueOrNull ?? PlaceStats.empty(place.placeRef);
 
-    // Ist dies ein eigener Community-Pin? -> Bearbeiten/Loeschen anbieten.
-    final isOwn =
+    // Bearbeiten/Loeschen anbieten, wenn eigener Community-Pin ODER Admin.
+    final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
+    final canManage =
         place.source == PlaceSource.community &&
-        (ref
-                .watch(myPlacesProvider)
-                .valueOrNull
-                ?.any((p) => p.id == place.id) ??
-            false);
+        (isAdmin ||
+            (ref
+                    .watch(myPlacesProvider)
+                    .valueOrNull
+                    ?.any((p) => p.id == place.id) ??
+                false));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -67,7 +70,7 @@ class PlaceDetailSheet extends ConsumerWidget {
                 onPressed: () => _rate(context, ref, repo),
               ),
             ),
-            if (isOwn) ...[
+            if (canManage) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
