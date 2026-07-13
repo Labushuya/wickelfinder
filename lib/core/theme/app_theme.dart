@@ -9,6 +9,9 @@ abstract final class AppColors {
   static const accentSoft = Color(0xFFF6D9E4); // Flächen
   static const ink = Color(0xFF2A2A40); // Text auf hell
   static const surface = Color(0xFFFBFAFF); // Hintergrund hell
+  // Dark-Mode: Anthrazit + aufgehellte Marken-Akzente fuer Kontrast.
+  static const darkSurface = Color(0xFF1C1C24); // Anthrazit
+  static const darkPrimary = Color(0xFF9B9BF0); // aufgehelltes Indigo
 }
 
 /// Zentrales App-Theme. Light und Dark aus einem Seed abgeleitet,
@@ -19,16 +22,25 @@ abstract final class AppTheme {
 
   static ThemeData _base(Brightness brightness) {
     final isLight = brightness == Brightness.light;
-    final scheme =
-        ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          brightness: brightness,
-        ).copyWith(
-          secondary: AppColors.accent,
-          secondaryContainer: AppColors.accentSoft,
-        );
+    var scheme = ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      brightness: brightness,
+    );
+    // Akzent-Container nur im Light-Mode mit soft-Rose ueberschreiben;
+    // im Dark-Mode die vom Seed abgeleiteten (dunklen) Container behalten,
+    // damit Text darauf lesbar bleibt.
+    scheme = isLight
+        ? scheme.copyWith(
+            secondary: AppColors.accent,
+            secondaryContainer: AppColors.accentSoft,
+            onSecondaryContainer: AppColors.ink,
+            tertiaryContainer: AppColors.accentSoft,
+            onTertiaryContainer: AppColors.ink,
+          )
+        : scheme.copyWith(secondary: AppColors.accent);
 
-    final surfaceColor = isLight ? AppColors.surface : scheme.surface;
+    final brandPrimary = isLight ? AppColors.primary : AppColors.darkPrimary;
+    final surfaceColor = isLight ? AppColors.surface : AppColors.darkSurface;
 
     return ThemeData(
       useMaterial3: true,
@@ -64,7 +76,7 @@ abstract final class AppTheme {
         color: surfaceColor,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(color: AppColors.ink),
+        textStyle: TextStyle(color: scheme.onSurface),
       ),
       // Bottom-Sheets (Detail, Bewerten) abgerundet, Markenflaeche.
       bottomSheetTheme: BottomSheetThemeData(
@@ -80,8 +92,12 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       chipTheme: ChipThemeData(
-        selectedColor: AppColors.accentSoft,
-        checkmarkColor: AppColors.primaryDeep,
+        selectedColor: isLight ? AppColors.accentSoft : AppColors.primaryDeep,
+        checkmarkColor: isLight ? AppColors.primaryDeep : Colors.white,
+        secondarySelectedColor: isLight
+            ? AppColors.accentSoft
+            : AppColors.primaryDeep,
+        labelStyle: TextStyle(color: scheme.onSurface),
         backgroundColor: isLight
             ? Colors.white
             : scheme.surfaceContainerHighest,

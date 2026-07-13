@@ -8,6 +8,8 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/settings_screen.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
@@ -39,6 +41,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      maybeShowThemeFirstRun(context, ref);
       UpdateSheet.checkAndShow(context, ref);
     });
   }
@@ -96,13 +99,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ],
           ),
 
-          // Suchleiste oben: volle Breite, 3-Punkt-Menue integriert.
+          // Suchleiste oben: volle Breite, 3-Punkt-Menue integriert,
+          // daneben ein kleiner Hell-/Dunkel-Schnellumschalter.
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: AddressSearchBar(
-                onSelected: _goTo,
-                trailing: _buildMenu(hasBackend),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AddressSearchBar(
+                      onSelected: _goTo,
+                      trailing: _buildMenu(hasBackend),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _ThemeToggleButton(),
+                ],
               ),
             ),
           ),
@@ -175,6 +187,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           Navigator.of(
             context,
           ).push(MaterialPageRoute(builder: (_) => const MyPlacesScreen()));
+        } else if (v == 'settings') {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
         }
       },
       itemBuilder: (_) => [
@@ -189,6 +205,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ],
             ),
           ),
+        const PopupMenuItem(
+          value: 'settings',
+          child: Row(
+            children: [
+              Icon(Icons.settings_outlined, size: 20),
+              SizedBox(width: 10),
+              Text('Einstellungen'),
+            ],
+          ),
+        ),
         const PopupMenuItem(
           value: 'update',
           child: Row(
@@ -355,6 +381,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       MaterialPageRoute(builder: (_) => AddPlaceScreen(initialCenter: center)),
     );
     if (added ?? false) ref.invalidate(mergedPlacesProvider(_bbox));
+  }
+}
+
+/// Kleiner Hell-/Dunkel-Schnellumschalter (Sonne/Mond) neben der Suchleiste.
+class _ThemeToggleButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    final isDark =
+        mode == ThemeMode.dark ||
+        (mode == ThemeMode.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+    return Material(
+      elevation: 3,
+      shape: const CircleBorder(),
+      color: Theme.of(context).colorScheme.surface,
+      child: IconButton(
+        tooltip: isDark ? 'Heller Modus' : 'Dunkler Modus',
+        icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+        onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+      ),
+    );
   }
 }
 
