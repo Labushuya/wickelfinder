@@ -111,7 +111,7 @@ class PlaceDetailSheet extends ConsumerWidget {
       ),
     );
     if (changed ?? false) {
-      ref.invalidate(myPlacesProvider);
+      await refreshCommunityDataFromWidget(ref);
     }
   }
 
@@ -144,7 +144,7 @@ class PlaceDetailSheet extends ConsumerWidget {
     if (ok != true) return;
     try {
       await repo.deletePlace(place.id);
-      ref.invalidate(myPlacesProvider);
+      await refreshCommunityDataFromWidget(ref);
       navigator.pop(); // Detail-Sheet schliessen
       messenger.showSnackBar(const SnackBar(content: Text('Platz gelöscht.')));
     } catch (_) {

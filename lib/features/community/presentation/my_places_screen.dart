@@ -80,7 +80,7 @@ class _PlaceTile extends ConsumerWidget {
             AddPlaceScreen(initialCenter: place.location, editPlace: place),
       ),
     );
-    if (changed ?? false) ref.invalidate(myPlacesProvider);
+    if (changed ?? false) await refreshCommunityDataFromWidget(ref);
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
@@ -110,7 +110,7 @@ class _PlaceTile extends ConsumerWidget {
     if (repo == null) return;
     try {
       await repo.deletePlace(place.id);
-      ref.invalidate(myPlacesProvider);
+      await refreshCommunityDataFromWidget(ref);
       messenger.showSnackBar(const SnackBar(content: Text('Platz gelöscht.')));
     } catch (_) {
       messenger.showSnackBar(

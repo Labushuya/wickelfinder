@@ -414,7 +414,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final added = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => AddPlaceScreen(initialCenter: center)),
     );
-    if (added ?? false) ref.invalidate(mergedPlacesProvider(_bbox));
+    if (added ?? false) await refreshCommunityDataFromWidget(ref);
   }
 }
 
@@ -427,14 +427,21 @@ class _ThemeToggleButton extends ConsumerWidget {
         mode == ThemeMode.dark ||
         (mode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+    // Exakt Suchleisten-Hoehe (56) und gleiche Flaeche/Optik.
     return Material(
       elevation: 3,
       shape: const CircleBorder(),
       color: Theme.of(context).colorScheme.surface,
-      child: IconButton(
-        tooltip: isDark ? 'Heller Modus' : 'Dunkler Modus',
-        icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-        onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+      child: SizedBox(
+        width: 56,
+        height: 56,
+        child: IconButton(
+          tooltip: isDark ? 'Heller Modus' : 'Dunkler Modus',
+          icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+          color: Theme.of(context).colorScheme.primary,
+          // Aktuelle Anzeige-Helligkeit uebergeben -> erster Tap wirkt sofort.
+          onPressed: () => ref.read(themeModeProvider.notifier).toggle(isDark),
+        ),
       ),
     );
   }
