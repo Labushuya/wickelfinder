@@ -30,13 +30,15 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen>
+    with TickerProviderStateMixin {
   static const _initialCenter = LatLng(52.515, 13.395); // Berlin (Fallback)
   final MapController _mapController = MapController();
 
   BBox _bbox = BBox.berlin;
   Timer? _bboxDebounce;
   double _zoom = 14;
+  AnimationController? _moveAnim;
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void dispose() {
     _bboxDebounce?.cancel();
+    _moveAnim?.dispose();
     super.dispose();
   }
 
@@ -131,11 +134,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Toggle exakt auf Hoehe der Suchleisten-Pille halten.
-                  SizedBox(
-                    height: 56,
-                    child: Center(child: _ThemeToggleButton()),
-                  ),
+                  _ThemeToggleButton(),
                 ],
               ),
             ),
@@ -290,8 +289,36 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         centerLonMoved > lonSpan * 0.3;
   }
 
+  /// Sanfte animierte Kamerafahrt zum Ziel (statt instantem Sprung).
   void _goTo(LatLng target, {double zoom = 15}) {
-    _mapController.move(target, zoom);
+    final camera = _mapController.camera;
+    final startCenter = camera.center;
+    final startZoom = camera.zoom;
+
+    _moveAnim?.dispose();
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _moveAnim = controller;
+    final curved = CurvedAnimation(parent: controller, curve: Curves.easeInOut);
+    final latT = Tween<double>(
+      begin: startCenter.latitude,
+      end: target.latitude,
+    );
+    final lonT = Tween<double>(
+      begin: startCenter.longitude,
+      end: target.longitude,
+    );
+    final zoomT = Tween<double>(begin: startZoom, end: zoom);
+
+    controller.addListener(() {
+      _mapController.move(
+        LatLng(latT.evaluate(curved), lonT.evaluate(curved)),
+        zoomT.evaluate(curved),
+      );
+    });
+    controller.forward();
   }
 
   Future<void> _goToMyLocation({bool initial = false}) async {

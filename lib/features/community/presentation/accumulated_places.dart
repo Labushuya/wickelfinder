@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../map/domain/changing_place.dart';
+import '../data/osm_cache.dart';
 
 /// Akkumulierte Pins, per placeRef dedupliziert. Die UI liest NUR hieraus,
 /// damit Pins bei Kartenbewegung/Zoom nicht verschwinden (sie werden ergaenzt,
@@ -16,21 +19,35 @@ class AccumulatedPlaces {
 /// Haelt alle je geladenen Pins im Speicher und merged neue Ergebnisse hinein.
 ///
 /// - OSM-Pins werden ergaenzt (nie entfernt, solange Speicher-Deckel nicht
-///   erreicht).
-/// - Community-Pins werden per "Scope-Reconciliation" ersetzt: nach jedem
-///   Community-Fetch wird die gesamte `community/*`-Teilmenge neu gesetzt, damit
-///   geloeschte/ausgeblendete Community-Pins auch ohne Neustart verschwinden.
+///   erreicht) und persistent gecacht -> beim Start sofort sichtbar.
+/// - Community-Pins werden per "Scope-Reconciliation" ersetzt.
 class AccumulatedPlacesNotifier extends Notifier<AccumulatedPlaces> {
   /// Weicher Speicher-Deckel: aeltester OSM-Ueberschuss wird verworfen.
   static const _maxOsmPins = 4000;
 
   // Einfuege-Reihenfolge der OSM-Refs (fuer LRU-artiges Kappen).
   final List<String> _osmOrder = [];
+  final OsmCache _osmCache = OsmCache();
 
   @override
-  AccumulatedPlaces build() => const AccumulatedPlaces({});
+  AccumulatedPlaces build() {
+    // Gecachte OSM-Pins beim Start sofort einspeisen (nicht auf Netz warten).
+    _preloadOsm();
+    return const AccumulatedPlaces({});
+  }
 
-  /// OSM-Pins ergaenzen (Union). Bereits vorhandene aktualisieren.
+  Future<void> _preloadOsm() async {
+    final cached = await _osmCache.load();
+    if (cached.isEmpty) return;
+    final next = Map<String, ChangingPlace>.of(state.byRef);
+    for (final p in cached) {
+      if (!next.containsKey(p.placeRef)) _osmOrder.add(p.placeRef);
+      next[p.placeRef] = p;
+    }
+    state = AccumulatedPlaces(next);
+  }
+
+  /// OSM-Pins ergaenzen (Union). Bereits vorhandene aktualisieren + persistieren.
   void addOsm(List<ChangingPlace> places) {
     if (places.isEmpty) return;
     final next = Map<String, ChangingPlace>.of(state.byRef);
@@ -40,6 +57,10 @@ class AccumulatedPlacesNotifier extends Notifier<AccumulatedPlaces> {
     }
     _capOsm(next);
     state = AccumulatedPlaces(next);
+    // OSM-Teilmenge persistieren (Fire-and-forget).
+    unawaited(
+      _osmCache.save(next.values.where((p) => p.source == PlaceSource.osm)),
+    );
   }
 
   /// Community-Pins vollstaendig ersetzen (Scope-Reconciliation) — so
