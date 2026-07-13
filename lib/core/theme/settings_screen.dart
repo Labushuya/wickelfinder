@@ -17,7 +17,7 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(
         children: [
-          _SectionHeader('Darstellung'),
+          const _SectionHeader('Darstellung'),
           RadioGroup<ThemeMode>(
             groupValue: mode,
             onChanged: (m) {
@@ -45,7 +45,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const Divider(),
-          _SectionHeader('Über'),
+          const _SectionHeader('Über'),
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('Wickelfinder'),
