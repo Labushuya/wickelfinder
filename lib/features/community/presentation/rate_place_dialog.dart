@@ -28,7 +28,6 @@ class RatePlaceDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      useSafeArea: true,
       builder: (_) =>
           RatePlaceDialog(initialStars: initialStars, initialTags: initialTags),
     );
@@ -122,7 +121,13 @@ class _RatePlaceDialogState extends State<RatePlaceDialog> {
             ),
             const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              // Unteres Inset fuer Softkeys/Gesten-Bar (edge-to-edge).
+              padding: EdgeInsets.fromLTRB(
+                20,
+                0,
+                20,
+                20 + MediaQuery.viewPaddingOf(context).bottom,
+              ),
               child: Row(
                 children: [
                   Expanded(

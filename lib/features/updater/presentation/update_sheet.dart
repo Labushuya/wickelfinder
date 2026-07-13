@@ -39,7 +39,6 @@ class UpdateSheet extends ConsumerStatefulWidget {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      useSafeArea: true,
       builder: (_) => UpdateSheet(update: update),
     );
   }
@@ -60,7 +59,12 @@ class _UpdateSheetState extends ConsumerState<UpdateSheet> {
         maxHeight: MediaQuery.of(context).size.height * 0.7,
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          4,
+          20,
+          24 + MediaQuery.viewPaddingOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
