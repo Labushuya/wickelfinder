@@ -4,10 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/supabase/supabase_init.dart';
 import '../../map/domain/changing_place.dart';
-import '../../map/presentation/map_providers.dart';
 import '../data/community_cache.dart';
 import '../data/community_repository.dart';
-import '../domain/place_merge.dart';
 import '../domain/place_stats.dart';
 
 /// Stellt das [CommunityRepository] bereit — aber nur, wenn Supabase
@@ -23,23 +21,36 @@ final communityCacheProvider = Provider<CommunityCache?>((ref) {
   return CommunityCache(SupabaseInit.client);
 });
 
-/// Liefert Community-Plaetze SOFORT aus dem Cache (auch offline) und stoesst im
-/// Hintergrund einen Delta-Sync an. Nach dem Sync wird der Provider
-/// invalidiert, sodass frische Daten ohne Karten-Wischen erscheinen.
-final communityPlacesProvider = FutureProvider<List<ChangingPlace>>((
-  ref,
-) async {
-  final cache = ref.watch(communityCacheProvider);
-  if (cache == null) return const [];
-  await cache.loadFromDisk();
-  // Hintergrund-Delta-Sync; bei Aenderung Provider erneut ausspielen.
-  unawaited(
-    cache.sync().then((changed) {
-      if (changed) ref.invalidateSelf();
-    }),
-  );
-  return cache.places;
-});
+/// Community-Plaetze: SOFORT aus dem Disk-Cache (auch offline), dann EINMAL
+/// Delta-Sync im Hintergrund. Der Sync schiebt das Ergebnis via `state =` nach
+/// (KEIN invalidateSelf -> kein Reload-Loop, kein Loading-Toggle).
+class CommunityPlacesNotifier extends AsyncNotifier<List<ChangingPlace>> {
+  @override
+  Future<List<ChangingPlace>> build() async {
+    final cache = ref.watch(communityCacheProvider);
+    if (cache == null) return const [];
+    await cache.loadFromDisk();
+    unawaited(
+      cache.sync().then((changed) {
+        if (changed && ref.mounted) state = AsyncData(cache.places);
+      }),
+    );
+    return cache.places; // sofort verfuegbar (Disk / leer)
+  }
+
+  /// Nach Schreibaktionen: sync + State setzen (ohne Rebuild-Sturm).
+  Future<void> refresh() async {
+    final cache = ref.read(communityCacheProvider);
+    if (cache == null) return;
+    await cache.sync();
+    state = AsyncData(cache.places);
+  }
+}
+
+final communityPlacesProvider =
+    AsyncNotifierProvider<CommunityPlacesNotifier, List<ChangingPlace>>(
+      CommunityPlacesNotifier.new,
+    );
 
 /// Laedt Aggregat-Statistik fuer EINEN place_ref.
 final statsProvider = FutureProvider.family<PlaceStats, String>((
@@ -52,17 +63,6 @@ final statsProvider = FutureProvider.family<PlaceStats, String>((
   return map[placeRef] ?? PlaceStats.empty(placeRef);
 });
 
-/// Merged OSM- + Community-Plaetze fuer die gegebene [BBox].
-/// Community kommt aus dem Cache (sofort + Delta-Sync), OSM per Overpass.
-final mergedPlacesProvider = FutureProvider.family<List<ChangingPlace>, BBox>((
-  ref,
-  bbox,
-) async {
-  final osm = await ref.watch(placesProvider(bbox).future);
-  final community = ref.watch(communityPlacesProvider).valueOrNull ?? const [];
-  return mergePlaces(osm: osm, community: community);
-});
-
 /// Eigene Community-Plaetze fuer den "Meine Pins"-Screen (direkt vom Server,
 /// da RLS-gefiltert auf die eigene Identitaet).
 final myPlacesProvider = FutureProvider<List<ChangingPlace>>((ref) async {
@@ -71,20 +71,13 @@ final myPlacesProvider = FutureProvider<List<ChangingPlace>>((ref) async {
   return repo.myPlaces();
 });
 
-/// Nach einer Schreibaktion (Platz anlegen/aendern/loeschen) aufrufen:
-/// synchronisiert den Cache sofort und aktualisiert alle abhaengigen Ansichten,
-/// sodass die Aenderung ohne Karten-Wischen sichtbar wird.
+/// Nach einer Schreibaktion Cache + Ansichten aktualisieren (ohne Reload-Sturm).
 Future<void> refreshCommunityData(Ref ref) async {
-  final cache = ref.read(communityCacheProvider);
-  await cache?.sync();
-  ref.invalidate(communityPlacesProvider);
+  await ref.read(communityPlacesProvider.notifier).refresh();
   ref.invalidate(myPlacesProvider);
 }
 
-/// WidgetRef-Variante fuer den Aufruf aus der UI.
 Future<void> refreshCommunityDataFromWidget(WidgetRef ref) async {
-  final cache = ref.read(communityCacheProvider);
-  await cache?.sync();
-  ref.invalidate(communityPlacesProvider);
+  await ref.read(communityPlacesProvider.notifier).refresh();
   ref.invalidate(myPlacesProvider);
 }
