@@ -54,22 +54,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Ladeergebnisse in den Akkumulator einspeisen (ergaenzt/rekonziliert),
-    // ohne die bereits gezeigten Pins zu ersetzen.
-    ref.listen<AsyncValue<List<ChangingPlace>>>(mergedPlacesProvider(_bbox), (
+    // OSM-Ergebnisse (Netz, pro BBox) additiv in den Akkumulator einspeisen.
+    ref.listen<AsyncValue<List<ChangingPlace>>>(placesProvider(_bbox), (
       _,
       next,
     ) {
       final data = next.valueOrNull;
-      if (data == null) return;
-      final notifier = ref.read(accumulatedPlacesProvider.notifier);
-      notifier.addOsm(data.where((p) => p.source == PlaceSource.osm).toList());
-      notifier.reconcileCommunity(
-        data.where((p) => p.source == PlaceSource.community).toList(),
-      );
+      if (data != null) {
+        ref.read(accumulatedPlacesProvider.notifier).addOsm(data);
+      }
     });
 
-    final loading = ref.watch(mergedPlacesProvider(_bbox)).isLoading;
+    // Community-Pins (Cache/offline) UNABHAENGIG vom OSM-Call einspeisen.
+    ref.listen<AsyncValue<List<ChangingPlace>>>(communityPlacesProvider, (
+      _,
+      next,
+    ) {
+      final data = next.valueOrNull;
+      if (data != null) {
+        ref.read(accumulatedPlacesProvider.notifier).reconcileCommunity(data);
+      }
+    });
+
+    // Loading-Banner NUR fuer den echten OSM-Netzcall (togglet nicht dauernd).
+    final loading = ref.watch(placesProvider(_bbox)).isLoading;
     final accumulated = ref.watch(accumulatedPlacesProvider);
     final hasBackend = ref.watch(communityRepositoryProvider) != null;
     final theme = Theme.of(context);
@@ -86,7 +94,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               maxZoom: 19,
               onMapReady: _onMapReady,
               onPositionChanged: (pos, _) {
-                _zoom = pos.zoom ?? _zoom;
+                final z = pos.zoom ?? _zoom;
+                // Nur bei echtem Zoom-Stufen-Wechsel rebuilden (Cluster<->Einzel);
+                // sonst kein setState -> kein Rebuild-Takt.
+                if (z.floor() != _zoom.floor()) {
+                  setState(() => _zoom = z);
+                } else {
+                  _zoom = z;
+                }
                 _scheduleBBoxUpdate();
               },
             ),
@@ -255,10 +270,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       north: bounds.north,
       east: bounds.east,
     );
-    if (!_bboxChangedSignificantly(_bbox, next)) {
-      setState(() {}); // Cluster nach Zoom/Pan neu rendern, ohne neu zu laden.
-      return;
-    }
+    // Nur bei WESENTLICHER Verschiebung neu laden -> genau ein Reload, kein Takt.
+    if (!_bboxChangedSignificantly(_bbox, next)) return;
     setState(() => _bbox = next);
   }
 

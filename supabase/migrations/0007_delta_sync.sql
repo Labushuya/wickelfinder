@@ -28,6 +28,9 @@ create table if not exists public.community_place_tombstones (
 );
 create index if not exists cp_tombstones_deleted_at_ix
   on public.community_place_tombstones (deleted_at);
+-- RLS an, KEINE Policy -> Clients koennen die Tabelle weder lesen noch schreiben.
+-- Zugriff ausschliesslich ueber die SECURITY-DEFINER-Funktion _delta.
+alter table public.community_place_tombstones enable row level security;
 revoke all on public.community_place_tombstones from anon, authenticated;
 
 -- Jeder DELETE schreibt einen Tombstone.
