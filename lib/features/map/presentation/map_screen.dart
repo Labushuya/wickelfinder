@@ -254,8 +254,16 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   // --- Karten-/BBox-Logik ---------------------------------------------------
 
-  void _onMapReady() {
-    _updateBBox();
+  bool _firstBBoxDone = false;
+
+  Future<void> _onMapReady() async {
+    // Sofort (ohne Animation) zum zuletzt bekannten Standort springen, damit
+    // kein Berlin-Zwischenzustand sichtbar ist. Danach echten GPS-Fix holen.
+    final last = await LocationService.lastKnown();
+    if (last != null && mounted) {
+      _mapController.move(last, 15);
+    }
+    _updateBBox(force: true); // ersten Load fuer den realen Viewport erzwingen
     _goToMyLocation(initial: true);
   }
 
@@ -264,7 +272,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     _bboxDebounce = Timer(const Duration(milliseconds: 800), _updateBBox);
   }
 
-  void _updateBBox() {
+  void _updateBBox({bool force = false}) {
     if (!mounted) return;
     final bounds = _mapController.camera.visibleBounds;
     final next = BBox(
@@ -273,8 +281,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
       north: bounds.north,
       east: bounds.east,
     );
-    // Nur bei WESENTLICHER Verschiebung neu laden -> genau ein Reload, kein Takt.
-    if (!_bboxChangedSignificantly(_bbox, next)) return;
+    // Erster Load immer; danach nur bei WESENTLICHER Verschiebung (kein Takt).
+    if (!force && _firstBBoxDone && !_bboxChangedSignificantly(_bbox, next)) {
+      return;
+    }
+    _firstBBoxDone = true;
     setState(() => _bbox = next);
   }
 
@@ -333,7 +344,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
       }
       return;
     }
-    if (mounted) _goTo(pos, zoom: 15);
+    if (!mounted) return;
+    if (initial) {
+      // Beim Start ohne sichtbaren Schwenk direkt positionieren.
+      _mapController.move(pos, 15);
+      _updateBBox(force: true);
+    } else {
+      _goTo(pos, zoom: 15); // manueller Tap: sanfte Kamerafahrt
+    }
   }
 
   // --- Marker: Viewport-Culling + Grid-Clustering ---------------------------
@@ -342,7 +360,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     // Akkumulierte Pins bleiben sichtbar (kein Wegwerfen beim Wegscrollen).
     // Ab mittlerem Zoom einzeln; bei kleinem Zoom in ein Grid clustern, damit
     // die Karte bei sehr vielen Pins nicht ueberladen wird.
-    if (_zoom >= 13) {
+    if (_zoom >= 12) {
       return [for (final p in places) _pinMarker(p)];
     }
     return _clusterMarkers(places);
@@ -477,10 +495,10 @@ class _ThemeToggleButton extends ConsumerWidget {
       shape: const CircleBorder(),
       color: Theme.of(context).colorScheme.surface,
       child: SizedBox(
-        width: 50,
-        height: 50,
+        width: 48,
+        height: 48,
         child: IconButton(
-          iconSize: 24,
+          iconSize: 23,
           padding: EdgeInsets.zero,
           tooltip: isDark ? 'Heller Modus' : 'Dunkler Modus',
           icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
