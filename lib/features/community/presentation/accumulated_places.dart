@@ -44,13 +44,27 @@ class AccumulatedPlacesNotifier extends Notifier<AccumulatedPlaces> {
 
   /// Community-Pins vollstaendig ersetzen (Scope-Reconciliation) — so
   /// verschwinden geloeschte/ausgeblendete Community-Pins zuverlaessig.
+  /// No-Op-Guard: identische Menge -> kein Rebuild (verhindert Flackern).
   void reconcileCommunity(List<ChangingPlace> community) {
-    final next = Map<String, ChangingPlace>.of(state.byRef)
+    final current = state.byRef;
+    final next = Map<String, ChangingPlace>.of(current)
       ..removeWhere((k, _) => k.startsWith('community/'));
     for (final p in community) {
       next[p.placeRef] = p;
     }
+    if (_sameKeys(current, next)) return;
     state = AccumulatedPlaces(next);
+  }
+
+  static bool _sameKeys(
+    Map<String, ChangingPlace> a,
+    Map<String, ChangingPlace> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (final k in a.keys) {
+      if (!b.containsKey(k)) return false;
+    }
+    return true;
   }
 
   void _capOsm(Map<String, ChangingPlace> map) {
