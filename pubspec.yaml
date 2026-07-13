@@ -3,7 +3,7 @@ description: "Wickelfinder – finde schnell Wickelplätze in deiner Nähe. Comm
 publish_to: "none"
 
 # SemVer: MAJOR.MINOR.PATCH+BUILD
-version: 0.8.0+9
+version: 0.8.0+10
 
 environment:
   # supabase_flutter 2.16 verlangt Dart >=3.9 / Flutter >=3.35 (= CI-Pin 3.35.5).
