@@ -29,10 +29,13 @@ class CommunityPlacesNotifier extends AsyncNotifier<List<ChangingPlace>> {
   Future<List<ChangingPlace>> build() async {
     final cache = ref.watch(communityCacheProvider);
     if (cache == null) return const [];
+    // Disposal-Guard: nach onDispose kein state= mehr setzen.
+    var disposed = false;
+    ref.onDispose(() => disposed = true);
     await cache.loadFromDisk();
     unawaited(
       cache.sync().then((changed) {
-        if (changed && ref.mounted) state = AsyncData(cache.places);
+        if (changed && !disposed) state = AsyncData(cache.places);
       }),
     );
     return cache.places; // sofort verfuegbar (Disk / leer)
