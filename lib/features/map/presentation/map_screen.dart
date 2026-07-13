@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -7,12 +8,14 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/my_places_screen.dart';
 import '../../search/presentation/address_search_bar.dart';
 import '../../updater/presentation/update_sheet.dart';
 import '../domain/changing_place.dart';
+import 'hold_to_label_fab.dart';
 import 'map_providers.dart';
 import 'place_detail_sheet.dart';
 
@@ -28,21 +31,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   static const _initialCenter = LatLng(52.515, 13.395); // Berlin (Fallback)
   final MapController _mapController = MapController();
 
-  /// Aktuell sichtbare Bounding-Box; treibt das Laden der Plaetze.
   BBox _bbox = BBox.berlin;
   Timer? _bboxDebounce;
-
-  /// Zuletzt erfolgreich geladene Plaetze. Bleiben sichtbar, waehrend eine neue
-  /// BBox laedt -> kein Leerflackern der Pins beim Wischen.
-  List<ChangingPlace> _lastPlaces = const [];
+  double _zoom = 14;
 
   @override
   void initState() {
     super.initState();
-    // Nach dem ersten Frame: einmalig versuchen, auf den Standort zu zentrieren.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _goToMyLocation(initial: true);
-      // Stiller Auto-Update-Check (zeigt nur bei neuer Version ein Sheet).
       UpdateSheet.checkAndShow(context, ref);
     });
   }
@@ -55,11 +51,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final placesAsync = ref.watch(mergedPlacesProvider(_bbox));
-    // Neue Daten uebernehmen, sobald da; sonst die letzten behalten.
-    final places = placesAsync.valueOrNull;
-    if (places != null) _lastPlaces = places;
+    // Ladeergebnisse in den Akkumulator einspeisen (ergaenzt/rekonziliert),
+    // ohne die bereits gezeigten Pins zu ersetzen.
+    ref.listen<AsyncValue<List<ChangingPlace>>>(mergedPlacesProvider(_bbox), (
+      _,
+      next,
+    ) {
+      final data = next.valueOrNull;
+      if (data == null) return;
+      final notifier = ref.read(accumulatedPlacesProvider.notifier);
+      notifier.addOsm(data.where((p) => p.source == PlaceSource.osm).toList());
+      notifier.reconcileCommunity(
+        data.where((p) => p.source == PlaceSource.community).toList(),
+      );
+    });
+
+    final loading = ref.watch(mergedPlacesProvider(_bbox)).isLoading;
+    final accumulated = ref.watch(accumulatedPlacesProvider);
     final hasBackend = ref.watch(communityRepositoryProvider) != null;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Stack(
@@ -68,118 +78,141 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter: _initialCenter,
-              initialZoom: 14,
-              onMapReady: _updateBBox,
-              onPositionChanged: (_, __) => _scheduleBBoxUpdate(),
+              initialZoom: _zoom,
+              minZoom: 3,
+              maxZoom: 19,
+              onMapReady: _onMapReady,
+              onPositionChanged: (pos, _) {
+                _zoom = pos.zoom ?? _zoom;
+                _scheduleBBoxUpdate();
+              },
             ),
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'de.wickelfinder.app',
               ),
-              MarkerLayer(markers: _buildMarkers()),
-              const SafeArea(
-                top: false,
-                minimum: EdgeInsets.only(right: 8, bottom: 8),
-                child: RichAttributionWidget(
-                  attributions: [
-                    TextSourceAttribution('© OpenStreetMap-Mitwirkende'),
-                  ],
-                ),
-              ),
+              MarkerLayer(markers: _buildMarkers(accumulated.all)),
             ],
           ),
-          // Suchleiste oben, im sicheren Bereich, mit Menue.
+
+          // Suchleiste oben: volle Breite, 3-Punkt-Menue integriert.
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Expanded(child: AddressSearchBar(onSelected: _goTo)),
-                  const SizedBox(width: 8),
-                  Material(
-                    elevation: 3,
-                    shape: const CircleBorder(),
-                    color: Theme.of(context).colorScheme.surface,
-                    child: PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      onSelected: (v) {
-                        if (v == 'update') {
-                          UpdateSheet.checkAndShow(context, ref, manual: true);
-                        } else if (v == 'my_pins') {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const MyPlacesScreen(),
-                            ),
-                          );
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        if (hasBackend)
-                          const PopupMenuItem(
-                            value: 'my_pins',
-                            child: Row(
-                              children: [
-                                Icon(Icons.push_pin_outlined, size: 20),
-                                SizedBox(width: 10),
-                                Text('Meine Pins'),
-                              ],
-                            ),
-                          ),
-                        const PopupMenuItem(
-                          value: 'update',
-                          child: Row(
-                            children: [
-                              Icon(Icons.system_update, size: 20),
-                              SizedBox(width: 10),
-                              Text('Nach Updates suchen'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              child: AddressSearchBar(
+                onSelected: _goTo,
+                trailing: _buildMenu(hasBackend),
               ),
             ),
           ),
-          if (placesAsync.isLoading)
+
+          if (loading)
             const Positioned(
-              top: 90,
+              top: 92,
               left: 0,
               right: 0,
               child: Center(child: _LoadingChip()),
             ),
-        ],
-      ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton(
-            heroTag: 'loc',
-            tooltip: 'Mein Standort',
-            onPressed: () => _goToMyLocation(),
-            child: const Icon(Icons.my_location),
-          ),
-          const SizedBox(height: 12),
-          if (hasBackend)
-            FloatingActionButton.extended(
-              heroTag: 'add',
-              onPressed: _addPlace,
-              icon: const Icon(Icons.add_location_alt),
-              label: const Text('Platz melden'),
+
+          // Persistente, dezente OSM-Attribution fix am unteren Rand.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                alignment: Alignment.center,
+                color: theme.colorScheme.surface.withValues(alpha: 0.7),
+                child: Text(
+                  '© OpenStreetMap-Mitwirkende',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
             ),
+          ),
         ],
       ),
+      // Buttons rechts, uebereinander, ueber der Attribution.
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            HoldToLabelFab(
+              heroTag: 'loc',
+              icon: Icons.my_location,
+              label: 'Mein Standort',
+              onPressed: () => _goToMyLocation(),
+            ),
+            if (hasBackend) ...[
+              const SizedBox(height: 12),
+              HoldToLabelFab(
+                heroTag: 'add',
+                icon: Icons.add_location_alt,
+                label: 'Platz melden',
+                onPressed: _addPlace,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenu(bool hasBackend) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert),
+      onSelected: (v) {
+        if (v == 'update') {
+          UpdateSheet.checkAndShow(context, ref, manual: true);
+        } else if (v == 'my_pins') {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const MyPlacesScreen()));
+        }
+      },
+      itemBuilder: (_) => [
+        if (hasBackend)
+          const PopupMenuItem(
+            value: 'my_pins',
+            child: Row(
+              children: [
+                Icon(Icons.push_pin_outlined, size: 20),
+                SizedBox(width: 10),
+                Text('Meine Pins'),
+              ],
+            ),
+          ),
+        const PopupMenuItem(
+          value: 'update',
+          child: Row(
+            children: [
+              Icon(Icons.system_update, size: 20),
+              SizedBox(width: 10),
+              Text('Nach Updates suchen'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   // --- Karten-/BBox-Logik ---------------------------------------------------
 
+  void _onMapReady() {
+    _updateBBox();
+    _goToMyLocation(initial: true);
+  }
+
   void _scheduleBBoxUpdate() {
     _bboxDebounce?.cancel();
-    // Laenger warten -> nicht bei jedem Mini-Wisch neu laden.
-    _bboxDebounce = Timer(const Duration(milliseconds: 900), _updateBBox);
+    _bboxDebounce = Timer(const Duration(milliseconds: 800), _updateBBox);
   }
 
   void _updateBBox() {
@@ -191,9 +224,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       north: bounds.north,
       east: bounds.east,
     );
-    // Nur neu laden, wenn sich der Ausschnitt WESENTLICH verschoben hat
-    // (Mitte > ~30% der aktuellen Breite/Hoehe). Verhindert Dauer-Reloads.
-    if (!_bboxChangedSignificantly(_bbox, next)) return;
+    if (!_bboxChangedSignificantly(_bbox, next)) {
+      setState(() {}); // Cluster nach Zoom/Pan neu rendern, ohne neu zu laden.
+      return;
+    }
     setState(() => _bbox = next);
   }
 
@@ -211,7 +245,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _goTo(LatLng target, {double zoom = 15}) {
-    // move() loest onPositionChanged aus -> _scheduleBBoxUpdate laedt nach.
     _mapController.move(target, zoom);
   }
 
@@ -228,22 +261,105 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (mounted) _goTo(pos, zoom: 15);
   }
 
-  // --- Marker / Detail / Hinzufuegen ---------------------------------------
+  // --- Marker: Viewport-Culling + Grid-Clustering ---------------------------
 
-  List<Marker> _buildMarkers() {
-    return [
-      for (final place in _lastPlaces)
-        Marker(
-          point: place.location,
-          width: 44,
-          height: 44,
-          child: GestureDetector(
-            onTap: () => _showDetail(place),
-            child: _PinIcon(source: place.source),
+  List<Marker> _buildMarkers(List<ChangingPlace> places) {
+    LatLngBounds? bounds;
+    try {
+      bounds = _mapController.camera.visibleBounds;
+    } catch (_) {
+      bounds = null;
+    }
+
+    // Nur Pins im (leicht erweiterten) Viewport rendern.
+    final visible = <ChangingPlace>[];
+    for (final p in places) {
+      if (bounds == null || _inBoundsPadded(bounds, p.location)) {
+        visible.add(p);
+      }
+    }
+
+    // Ab mittlerem Zoom einzeln zeigen; bei kleinem Zoom in ein Grid clustern.
+    if (_zoom >= 13) {
+      return [for (final p in visible) _pinMarker(p)];
+    }
+    return _clusterMarkers(visible);
+  }
+
+  bool _inBoundsPadded(LatLngBounds b, LatLng p) {
+    final latPad = (b.north - b.south).abs() * 0.2;
+    final lonPad = (b.east - b.west).abs() * 0.2;
+    return p.latitude >= b.south - latPad &&
+        p.latitude <= b.north + latPad &&
+        p.longitude >= b.west - lonPad &&
+        p.longitude <= b.east + lonPad;
+  }
+
+  /// Einfaches Grid-Clustering: Pins in Zellen bucketen, pro Zelle ein
+  /// Cluster-Marker (bei >1) bzw. der Einzel-Pin.
+  List<Marker> _clusterMarkers(List<ChangingPlace> places) {
+    // Zellgroesse abhaengig vom Zoom (kleinerer Zoom -> groebere Zellen).
+    final cell = 360 / math.pow(2, _zoom) * 2.5;
+    final buckets = <String, List<ChangingPlace>>{};
+    for (final p in places) {
+      final key =
+          '${(p.location.latitude / cell).floor()}:'
+          '${(p.location.longitude / cell).floor()}';
+      (buckets[key] ??= []).add(p);
+    }
+
+    final markers = <Marker>[];
+    for (final group in buckets.values) {
+      if (group.length == 1) {
+        markers.add(_pinMarker(group.first));
+      } else {
+        // Cluster-Mittelpunkt = Durchschnitt.
+        final lat =
+            group.map((p) => p.location.latitude).reduce((a, b) => a + b) /
+            group.length;
+        final lon =
+            group.map((p) => p.location.longitude).reduce((a, b) => a + b) /
+            group.length;
+        markers.add(_clusterMarker(LatLng(lat, lon), group.length));
+      }
+    }
+    return markers;
+  }
+
+  Marker _pinMarker(ChangingPlace place) => Marker(
+    point: place.location,
+    width: 44,
+    height: 44,
+    child: GestureDetector(
+      onTap: () => _showDetail(place),
+      child: _PinIcon(source: place.source),
+    ),
+  );
+
+  Marker _clusterMarker(LatLng point, int count) => Marker(
+    point: point,
+    width: 44,
+    height: 44,
+    child: GestureDetector(
+      onTap: () => _goTo(point, zoom: math.min(_zoom + 3, 17)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          count > 99 ? '99+' : '$count',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
           ),
         ),
-    ];
-  }
+      ),
+    ),
+  );
 
   void _showDetail(ChangingPlace place) {
     unawaited(
