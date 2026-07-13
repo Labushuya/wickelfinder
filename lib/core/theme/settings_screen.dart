@@ -18,27 +18,31 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         children: [
           _SectionHeader('Darstellung'),
-          RadioListTile<ThemeMode>(
-            title: const Text('Hell'),
-            secondary: const Icon(Icons.light_mode_outlined),
-            value: ThemeMode.light,
+          RadioGroup<ThemeMode>(
             groupValue: mode,
-            onChanged: (m) => ref.read(themeModeProvider.notifier).set(m!),
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Dunkel'),
-            secondary: const Icon(Icons.dark_mode_outlined),
-            value: ThemeMode.dark,
-            groupValue: mode,
-            onChanged: (m) => ref.read(themeModeProvider.notifier).set(m!),
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Systemeinstellung folgen'),
-            subtitle: const Text('Hell oder dunkel wie dein Gerät'),
-            secondary: const Icon(Icons.brightness_auto_outlined),
-            value: ThemeMode.system,
-            groupValue: mode,
-            onChanged: (m) => ref.read(themeModeProvider.notifier).set(m!),
+            onChanged: (m) {
+              if (m != null) ref.read(themeModeProvider.notifier).set(m);
+            },
+            child: const Column(
+              children: [
+                RadioListTile<ThemeMode>(
+                  title: Text('Hell'),
+                  secondary: Icon(Icons.light_mode_outlined),
+                  value: ThemeMode.light,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text('Dunkel'),
+                  secondary: Icon(Icons.dark_mode_outlined),
+                  value: ThemeMode.dark,
+                ),
+                RadioListTile<ThemeMode>(
+                  title: Text('Systemeinstellung folgen'),
+                  subtitle: Text('Hell oder dunkel wie dein Gerät'),
+                  secondary: Icon(Icons.brightness_auto_outlined),
+                  value: ThemeMode.system,
+                ),
+              ],
+            ),
           ),
           const Divider(),
           _SectionHeader('Über'),

@@ -39,7 +39,6 @@ abstract final class AppTheme {
           )
         : scheme.copyWith(secondary: AppColors.accent);
 
-    final brandPrimary = isLight ? AppColors.primary : AppColors.darkPrimary;
     final surfaceColor = isLight ? AppColors.surface : AppColors.darkSurface;
 
     return ThemeData(
