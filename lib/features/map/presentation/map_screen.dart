@@ -264,35 +264,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   // --- Marker: Viewport-Culling + Grid-Clustering ---------------------------
 
   List<Marker> _buildMarkers(List<ChangingPlace> places) {
-    LatLngBounds? bounds;
-    try {
-      bounds = _mapController.camera.visibleBounds;
-    } catch (_) {
-      bounds = null;
-    }
-
-    // Nur Pins im (leicht erweiterten) Viewport rendern.
-    final visible = <ChangingPlace>[];
-    for (final p in places) {
-      if (bounds == null || _inBoundsPadded(bounds, p.location)) {
-        visible.add(p);
-      }
-    }
-
-    // Ab mittlerem Zoom einzeln zeigen; bei kleinem Zoom in ein Grid clustern.
+    // Akkumulierte Pins bleiben sichtbar (kein Wegwerfen beim Wegscrollen).
+    // Ab mittlerem Zoom einzeln; bei kleinem Zoom in ein Grid clustern, damit
+    // die Karte bei sehr vielen Pins nicht ueberladen wird.
     if (_zoom >= 13) {
-      return [for (final p in visible) _pinMarker(p)];
+      return [for (final p in places) _pinMarker(p)];
     }
-    return _clusterMarkers(visible);
-  }
-
-  bool _inBoundsPadded(LatLngBounds b, LatLng p) {
-    final latPad = (b.north - b.south).abs() * 0.2;
-    final lonPad = (b.east - b.west).abs() * 0.2;
-    return p.latitude >= b.south - latPad &&
-        p.latitude <= b.north + latPad &&
-        p.longitude >= b.west - lonPad &&
-        p.longitude <= b.east + lonPad;
+    return _clusterMarkers(places);
   }
 
   /// Einfaches Grid-Clustering: Pins in Zellen bucketen, pro Zelle ein

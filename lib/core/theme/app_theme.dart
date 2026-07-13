@@ -18,18 +18,86 @@ abstract final class AppTheme {
   static ThemeData get dark => _base(Brightness.dark);
 
   static ThemeData _base(Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: brightness,
-    ).copyWith(secondary: AppColors.accent);
+    final isLight = brightness == Brightness.light;
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: brightness,
+        ).copyWith(
+          secondary: AppColors.accent,
+          secondaryContainer: AppColors.accentSoft,
+        );
+
+    final surfaceColor = isLight ? AppColors.surface : scheme.surface;
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: brightness == Brightness.light
-          ? AppColors.surface
-          : null,
-      appBarTheme: const AppBarTheme(centerTitle: true),
+      scaffoldBackgroundColor: surfaceColor,
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      // Suchleiste / Eingabefelder in Markenoptik.
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surfaceColor,
+        hintStyle: TextStyle(color: scheme.outline),
+        prefixIconColor: AppColors.primary,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+      // Aufklapp-Menue in Markenfarben, abgerundet.
+      popupMenuTheme: PopupMenuThemeData(
+        color: surfaceColor,
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: TextStyle(color: AppColors.ink),
+      ),
+      // Bottom-Sheets (Detail, Bewerten) abgerundet, Markenflaeche.
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surfaceColor,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surfaceColor,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      chipTheme: ChipThemeData(
+        selectedColor: AppColors.accentSoft,
+        checkmarkColor: AppColors.primaryDeep,
+        backgroundColor: isLight
+            ? Colors.white
+            : scheme.surfaceContainerHighest,
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+        ),
+      ),
     );
   }
 }
