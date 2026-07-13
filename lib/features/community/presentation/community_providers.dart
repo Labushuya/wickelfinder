@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/supabase/supabase_init.dart';
@@ -31,9 +33,11 @@ final communityPlacesProvider = FutureProvider<List<ChangingPlace>>((
   if (cache == null) return const [];
   await cache.loadFromDisk();
   // Hintergrund-Delta-Sync; bei Aenderung Provider erneut ausspielen.
-  cache.sync().then((changed) {
-    if (changed) ref.invalidateSelf();
-  });
+  unawaited(
+    cache.sync().then((changed) {
+      if (changed) ref.invalidateSelf();
+    }),
+  );
   return cache.places;
 });
 
