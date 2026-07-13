@@ -256,15 +256,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   bool _firstBBoxDone = false;
 
-  Future<void> _onMapReady() async {
-    // Sofort (ohne Animation) zum zuletzt bekannten Standort springen, damit
-    // kein Berlin-Zwischenzustand sichtbar ist. Danach echten GPS-Fix holen.
+  void _onMapReady() {
+    unawaited(_initialCenterAndLoad());
+  }
+
+  /// Sofort (ohne Animation) zum zuletzt bekannten Standort springen, damit
+  /// kein Berlin-Zwischenzustand sichtbar ist. Danach echten GPS-Fix holen.
+  Future<void> _initialCenterAndLoad() async {
     final last = await LocationService.lastKnown();
     if (last != null && mounted) {
       _mapController.move(last, 15);
     }
     _updateBBox(force: true); // ersten Load fuer den realen Viewport erzwingen
-    _goToMyLocation(initial: true);
+    await _goToMyLocation(initial: true);
   }
 
   void _scheduleBBoxUpdate() {
