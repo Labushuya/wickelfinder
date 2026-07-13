@@ -34,7 +34,16 @@ class PlaceDetailSheet extends ConsumerWidget {
                 false));
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      // Explizites Bottom-Inset fuer Softkeys/Gesten-Bar (edge-to-edge) +
+      // ggf. Tastatur. useSafeArea allein reicht auf Android 15+ nicht.
+      padding: EdgeInsets.fromLTRB(
+        20,
+        8,
+        20,
+        24 +
+            MediaQuery.viewPaddingOf(context).bottom +
+            MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

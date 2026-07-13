@@ -448,7 +448,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
       showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
-        useSafeArea: true, // Nav-Bar/Notch beachten
         builder: (_) => PlaceDetailSheet(place: place),
       ),
     );
@@ -478,10 +477,10 @@ class _ThemeToggleButton extends ConsumerWidget {
       shape: const CircleBorder(),
       color: Theme.of(context).colorScheme.surface,
       child: SizedBox(
-        width: 46,
-        height: 46,
+        width: 50,
+        height: 50,
         child: IconButton(
-          iconSize: 22,
+          iconSize: 24,
           padding: EdgeInsets.zero,
           tooltip: isDark ? 'Heller Modus' : 'Dunkler Modus',
           icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
