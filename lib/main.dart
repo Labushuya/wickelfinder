@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/supabase/supabase_init.dart';
+import 'core/map/tile_cache.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/map/presentation/map_screen.dart';
@@ -11,6 +12,7 @@ Future<void> main() async {
   // Backend nur initialisieren, wenn per --dart-define konfiguriert.
   // Ohne Konfiguration laeuft die App als reine (Offline-taugliche) Kartenansicht.
   await SupabaseInit.ensureInitialized();
+  await TileCache.instance(); // persistenter Kachel-Cache vorbereiten
   runApp(const ProviderScope(child: WickelfinderApp()));
 }
 
