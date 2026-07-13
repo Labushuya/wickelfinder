@@ -37,9 +37,11 @@ class ThemeModeController extends Notifier<ThemeMode> {
     await _prefs!.setString(_key, mode.name);
   }
 
-  /// Schnell-Toggle hell <-> dunkel (ignoriert 'system').
-  Future<void> toggle() =>
-      set(state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
+  /// Schnell-Toggle hell <-> dunkel. Basis ist die AKTUELL ANGEZEIGTE
+  /// Helligkeit (nicht der gespeicherte Modus), damit der erste Tap auch bei
+  /// 'system' sofort sichtbar umschaltet.
+  Future<void> toggle(bool currentlyDark) =>
+      set(currentlyDark ? ThemeMode.light : ThemeMode.dark);
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(
