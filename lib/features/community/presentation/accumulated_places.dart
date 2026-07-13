@@ -39,10 +39,15 @@ class AccumulatedPlacesNotifier extends Notifier<AccumulatedPlaces> {
   Future<void> _preloadOsm() async {
     final cached = await _osmCache.load();
     if (cached.isEmpty) return;
+    // Gegen den AKTUELLEN state mergen (nicht alten Snapshot ueberschreiben) —
+    // sonst gehen zwischenzeitlich per addOsm/reconcileCommunity gesetzte Pins
+    // verloren (Race). Nur fehlende Keys ergaenzen.
     final next = Map<String, ChangingPlace>.of(state.byRef);
     for (final p in cached) {
-      if (!next.containsKey(p.placeRef)) _osmOrder.add(p.placeRef);
-      next[p.placeRef] = p;
+      if (!next.containsKey(p.placeRef)) {
+        _osmOrder.add(p.placeRef);
+        next[p.placeRef] = p;
+      }
     }
     state = AccumulatedPlaces(next);
   }
@@ -57,9 +62,13 @@ class AccumulatedPlacesNotifier extends Notifier<AccumulatedPlaces> {
     }
     _capOsm(next);
     state = AccumulatedPlaces(next);
-    // OSM-Teilmenge persistieren (Fire-and-forget).
+    // In _osmOrder-Reihenfolge persistieren (konsistent mit In-Memory-Cap).
     unawaited(
-      _osmCache.save(next.values.where((p) => p.source == PlaceSource.osm)),
+      _osmCache.save([
+        for (final ref in _osmOrder)
+          if (next[ref] case final ChangingPlace p)
+            if (p.source == PlaceSource.osm) p,
+      ]),
     );
   }
 
