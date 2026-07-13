@@ -39,6 +39,7 @@ class UpdateSheet extends ConsumerStatefulWidget {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (_) => UpdateSheet(update: update),
     );
   }

@@ -28,6 +28,7 @@ class RatePlaceDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      useSafeArea: true,
       builder: (_) =>
           RatePlaceDialog(initialStars: initialStars, initialTags: initialTags),
     );

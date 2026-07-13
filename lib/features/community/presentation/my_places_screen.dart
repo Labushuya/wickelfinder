@@ -31,6 +31,10 @@ class MyPlacesScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(myPlacesProvider),
             child: ListView.separated(
+              // Unteres Inset -> letztes Item nicht hinter der Nav-Bar.
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewPaddingOf(context).bottom + 12,
+              ),
               itemCount: places.length,
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (_, i) => _PlaceTile(place: places[i]),
