@@ -18,6 +18,9 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewPaddingOf(context).bottom + 12,
+        ),
         children: [
           const _SectionHeader('Darstellung'),
           RadioGroup<ThemeMode>(

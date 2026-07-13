@@ -171,9 +171,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
           ),
         ],
       ),
-      // Buttons rechts, uebereinander, ueber der Attribution.
+      // Buttons rechts, uebereinander, ueber der Attribution + Nav-Bar-Inset.
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 18),
+        padding: EdgeInsets.only(
+          bottom: 18 + MediaQuery.viewPaddingOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -446,6 +448,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
       showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
+        useSafeArea: true, // Nav-Bar/Notch beachten
         builder: (_) => PlaceDetailSheet(place: place),
       ),
     );
@@ -469,15 +472,17 @@ class _ThemeToggleButton extends ConsumerWidget {
         mode == ThemeMode.dark ||
         (mode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-    // Exakt Suchleisten-Hoehe (56) und gleiche Flaeche/Optik.
+    // Kompakter als die Suchleiste, oben ausgerichtet (Row = start).
     return Material(
       elevation: 3,
       shape: const CircleBorder(),
       color: Theme.of(context).colorScheme.surface,
       child: SizedBox(
-        width: 56,
-        height: 56,
+        width: 46,
+        height: 46,
         child: IconButton(
+          iconSize: 22,
+          padding: EdgeInsets.zero,
           tooltip: isDark ? 'Heller Modus' : 'Dunkler Modus',
           icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
           color: Theme.of(context).colorScheme.primary,
