@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,16 +52,36 @@ abstract final class LocationService {
         return null;
       }
 
+      // Zuerst die schnell verfuegbare letzte Geraeteposition (kein GPS-Warmup);
+      // liefert sofort einen groben Fix, waehrend getCurrentPosition genauer wird.
+      final lastDevice = await Geolocator.getLastKnownPosition();
+      if (lastDevice != null) {
+        final ll = LatLng(lastDevice.latitude, lastDevice.longitude);
+        await _persist(ll);
+        // getCurrentPosition trotzdem im Hintergrund anstossen (persistiert).
+        unawaited(_refreshPrecise());
+        return ll;
+      }
+
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: 12),
       );
       final latLng = LatLng(pos.latitude, pos.longitude);
-      await _persist(latLng); // fuer schnellen Start beim naechsten Mal
+      await _persist(latLng);
       return latLng;
     } catch (_) {
-      // Kein Dienst / keine Plugin-Anbindung (z. B. Test) / abgelehnt.
       return null;
     }
+  }
+
+  static Future<void> _refreshPrecise() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 12),
+      );
+      await _persist(LatLng(pos.latitude, pos.longitude));
+    } catch (_) {}
   }
 }

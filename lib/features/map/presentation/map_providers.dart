@@ -31,6 +31,38 @@ class BBox {
     north: 52.54,
     east: 13.43,
   );
+
+  /// Auf Raster gerundete + generoes erweiterte Box. Das Runden sorgt dafuer,
+  /// dass kleine Kartenbewegungen denselben Provider-Key (== / hashCode) treffen
+  /// -> kein Dauer-Reload; die Erweiterung laedt Pins knapp ausserhalb des
+  /// Sichtbereichs mit, sodass am Rand nichts fehlt.
+  factory BBox.snappedFrom({
+    required double south,
+    required double west,
+    required double north,
+    required double east,
+  }) {
+    const grid = 0.02; // ~2 km Raster
+    double floorTo(double v) => (v / grid).floor() * grid;
+    double ceilTo(double v) => (v / grid).ceil() * grid;
+    return BBox(
+      south: floorTo(south) - grid,
+      west: floorTo(west) - grid,
+      north: ceilTo(north) + grid,
+      east: ceilTo(east) + grid,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is BBox &&
+      other.south == south &&
+      other.west == west &&
+      other.north == north &&
+      other.east == east;
+
+  @override
+  int get hashCode => Object.hash(south, west, north, east);
 }
 
 /// Lädt die Wickelplätze für die gegebene [BBox].
