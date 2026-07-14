@@ -85,6 +85,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final accumulated = ref.watch(accumulatedPlacesProvider);
     final hasBackend = ref.watch(communityRepositoryProvider) != null;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: Stack(
@@ -111,7 +112,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                // Hell: OSM-Standardkacheln. Dunkel: CartoDB dark_all
+                // (kostenlos, ODbL/CARTO-konform bei genannter Attribution).
+                urlTemplate: isDark
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: isDark ? const ['a', 'b', 'c', 'd'] : const [],
                 userAgentPackageName: 'de.wickelfinder.app',
                 tileProvider: TileCache.instanceOrNull()?.provider(),
               ),
@@ -161,7 +167,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 alignment: Alignment.center,
                 color: theme.colorScheme.surface.withValues(alpha: 0.7),
                 child: Text(
-                  '© OpenStreetMap-Mitwirkende',
+                  isDark
+                      ? '© OpenStreetMap-Mitwirkende, © CARTO'
+                      : '© OpenStreetMap-Mitwirkende',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -465,6 +473,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
       showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
+        // Sheet darf ueber die ~9/16-Grenze wachsen; Inhalt scrollt intern,
+        // Buttons bleiben oberhalb der Softkeys/Gestenleiste klickbar.
+        isScrollControlled: true,
         builder: (_) => PlaceDetailSheet(place: place),
       ),
     );
@@ -529,19 +540,31 @@ class _LoadingChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
+      color: theme.colorScheme.primaryContainer,
+      elevation: 3,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
             ),
             const SizedBox(width: 10),
-            Text('Lädt …', style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Lädt …',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

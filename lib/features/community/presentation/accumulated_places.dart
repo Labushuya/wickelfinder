@@ -74,7 +74,11 @@ class AccumulatedPlacesNotifier extends Notifier<AccumulatedPlaces> {
 
   /// Community-Pins vollstaendig ersetzen (Scope-Reconciliation) — so
   /// verschwinden geloeschte/ausgeblendete Community-Pins zuverlaessig.
-  /// No-Op-Guard: identische Menge -> kein Rebuild (verhindert Flackern).
+  /// No-Op-Guard: nur wenn Keys UND Instanzen unveraendert sind -> kein
+  /// Rebuild (verhindert Flackern). WICHTIG: Der Cache erzeugt bei jedem Edit
+  /// eine NEUE ChangingPlace-Instanz -> ein Edit aendert die Instanz-Identitaet
+  /// und loest zuverlaessig einen Rebuild aus (frueher wurden nur Keys
+  /// verglichen -> Edits mit gleicher id wurden verschluckt).
   void reconcileCommunity(List<ChangingPlace> community) {
     final current = state.byRef;
     final next = Map<String, ChangingPlace>.of(current)
@@ -82,17 +86,21 @@ class AccumulatedPlacesNotifier extends Notifier<AccumulatedPlaces> {
     for (final p in community) {
       next[p.placeRef] = p;
     }
-    if (_sameKeys(current, next)) return;
+    if (_sameContent(current, next)) return;
     state = AccumulatedPlaces(next);
   }
 
-  static bool _sameKeys(
+  /// True nur, wenn beide Maps dieselben Keys UND dieselben Instanzen tragen.
+  /// `identical` genuegt, weil geaenderte Pins aus dem Cache stets als neue
+  /// Instanz kommen (keine In-Place-Mutation).
+  static bool _sameContent(
     Map<String, ChangingPlace> a,
     Map<String, ChangingPlace> b,
   ) {
     if (a.length != b.length) return false;
-    for (final k in a.keys) {
-      if (!b.containsKey(k)) return false;
+    for (final entry in b.entries) {
+      final prev = a[entry.key];
+      if (prev == null || !identical(prev, entry.value)) return false;
     }
     return true;
   }

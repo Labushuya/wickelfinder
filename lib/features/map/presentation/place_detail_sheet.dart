@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../community/domain/place_stats.dart';
@@ -41,82 +42,110 @@ class PlaceDetailSheet extends ConsumerWidget {
                     ?.any((p) => p.id == place.id) ??
                 false));
 
-    return Padding(
-      // Explizites Bottom-Inset fuer Softkeys/Gesten-Bar (edge-to-edge) +
-      // ggf. Tastatur. useSafeArea allein reicht auf Android 15+ nicht.
-      padding: EdgeInsets.fromLTRB(
-        20,
-        8,
-        20,
-        24 +
-            MediaQuery.viewPaddingOf(context).bottom +
-            MediaQuery.viewInsetsOf(context).bottom,
-      ),
+    final media = MediaQuery.of(context);
+    // Hoehe deckeln (max 85% Screen) und Inhalt scrollen lassen, damit bei
+    // vielen Chips/Bannern die Aktions-Buttons NICHT hinter die Softkeys/
+    // Gestenleiste rutschen. Buttons bleiben unten fixiert (ausserhalb des
+    // Scroll-Bereichs) und immer klickbar.
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: media.size.height * 0.85),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(place.name ?? 'Wickelplatz', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 8),
-          _RatingSummary(stats: stats),
-          if (myRating != null) ...[
-            const SizedBox(height: 6),
-            _MyRatingRow(rating: myRating),
-          ],
-          const SizedBox(height: 12),
-          _AccessibilityBanner(place: place),
-          const SizedBox(height: 4),
-          if (place.locationHint != null)
-            _InfoRow(icon: Icons.place_outlined, label: place.locationHint!),
-          if (place.wheelchairAccessible != null)
-            _InfoRow(
-              icon: Icons.accessible,
-              label: place.wheelchairAccessible!
-                  ? 'Barrierefrei zugänglich'
-                  : 'Nicht barrierefrei',
-            ),
-          _InfoRow(
-            icon: Icons.source_outlined,
-            label: place.source == PlaceSource.osm
-                ? 'Quelle: OpenStreetMap'
-                : 'Quelle: Community',
-          ),
-          if (repo != null) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.star_outline),
-                label: Text(myRating == null ? 'Bewerten' : 'Bewertung ändern'),
-                onPressed: () => _rate(context, ref, repo, myRating),
-              ),
-            ),
-            if (canManage) ...[
-              const SizedBox(height: 8),
-              Row(
+          // Scrollbarer Info-Bereich.
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Bearbeiten'),
-                      onPressed: () => _edit(context, ref),
-                    ),
+                  Text(
+                    place.name ?? 'Wickelplatz',
+                    style: theme.textTheme.titleLarge,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Löschen'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
-                      ),
-                      onPressed: () => _delete(context, ref, repo),
+                  const SizedBox(height: 8),
+                  _RatingSummary(stats: stats),
+                  if (myRating != null) ...[
+                    const SizedBox(height: 6),
+                    _MyRatingRow(rating: myRating),
+                  ],
+                  const SizedBox(height: 12),
+                  _AccessibilityBanner(place: place),
+                  const SizedBox(height: 4),
+                  if (place.locationHint != null)
+                    _InfoRow(
+                      icon: Icons.place_outlined,
+                      label: place.locationHint!,
                     ),
+                  if (place.wheelchairAccessible != null)
+                    _InfoRow(
+                      icon: Icons.accessible,
+                      label: place.wheelchairAccessible!
+                          ? 'Barrierefrei zugänglich'
+                          : 'Nicht barrierefrei',
+                    ),
+                  _InfoRow(
+                    icon: Icons.source_outlined,
+                    label: place.source == PlaceSource.osm
+                        ? 'Quelle: OpenStreetMap'
+                        : 'Quelle: Community',
                   ),
                 ],
               ),
-            ],
-          ],
+            ),
+          ),
+          // Aktions-Buttons unten fixiert, mit Softkey-/Gesten-Inset.
+          if (repo != null)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                12,
+                20,
+                20 + media.viewPadding.bottom + media.viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.star_outline),
+                      label: Text(
+                        myRating == null ? 'Bewerten' : 'Bewertung ändern',
+                      ),
+                      onPressed: () => _rate(context, ref, repo, myRating),
+                    ),
+                  ),
+                  if (canManage) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Bearbeiten'),
+                            onPressed: () => _edit(context, ref),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Löschen'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.colorScheme.error,
+                            ),
+                            onPressed: () => _delete(context, ref, repo),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -354,6 +383,9 @@ class _AccessibilityBanner extends StatelessWidget {
     final fg = restricted
         ? theme.colorScheme.onTertiaryContainer
         : theme.colorScheme.onSecondaryContainer;
+    // Brand-Akzent als markanter Rahmen/Icon — hebt das Banner klar vom
+    // Hintergrund ab, ohne die (WCAG-gepruefte) Textfarbe fg zu aendern.
+    final accent = restricted ? AppColors.accent : AppColors.primary;
 
     return Container(
       width: double.infinity,
@@ -361,10 +393,26 @@ class _AccessibilityBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: accent, width: 4)),
       ),
-      child: Text(
-        parts.join('  ·  '),
-        style: theme.textTheme.bodyMedium?.copyWith(color: fg),
+      child: Row(
+        children: [
+          Icon(
+            restricted ? Icons.info_outline : Icons.check_circle_outline,
+            size: 20,
+            color: accent,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              parts.join('  ·  '),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: fg,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
