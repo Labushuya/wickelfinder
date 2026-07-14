@@ -177,6 +177,10 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
           wheelchair: _wheelchair,
           fee: _fee,
         );
+        // Refresh HIER ausloesen, wo der ConsumerState-ref garantiert lebt.
+        // (Frueher lief der Refresh ueber den bereits gepoppten Sheet-Ref und
+        // wurde nie ausgefuehrt -> Edits erschienen nicht.)
+        await refreshCommunityDataFromWidget(ref);
         messenger.showSnackBar(
           const SnackBar(content: Text('Platz aktualisiert.')),
         );
@@ -189,6 +193,7 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
           wheelchair: _wheelchair,
           fee: _fee,
         );
+        await refreshCommunityDataFromWidget(ref);
         messenger.showSnackBar(
           const SnackBar(content: Text('Platz hinzugefügt. Danke!')),
         );

@@ -113,6 +113,20 @@ abstract final class AppTheme {
           foregroundColor: Colors.white,
         ),
       ),
+      // Info-/Statusmeldungen markant in Markenoptik statt Default-Grau
+      // (Material-Default waere inverseSurface = dunkles Grau).
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isLight ? AppColors.primary : AppColors.darkPrimary,
+        contentTextStyle: TextStyle(
+          color: isLight ? Colors.white : AppColors.ink,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: isLight ? AppColors.accentSoft : AppColors.ink,
+        elevation: 4,
+        insetPadding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
     );
   }
 }

@@ -126,7 +126,7 @@ class PlaceDetailSheet extends ConsumerWidget {
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.edit_outlined),
                             label: const Text('Bearbeiten'),
-                            onPressed: () => _edit(context, ref),
+                            onPressed: () => _edit(context),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -151,18 +151,18 @@ class PlaceDetailSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _edit(BuildContext context, WidgetRef ref) async {
+  Future<void> _edit(BuildContext context) async {
     final navigator = Navigator.of(context);
     navigator.pop(); // Detail-Sheet schliessen
-    final changed = await navigator.push<bool>(
+    // AddPlaceScreen loest den Community-Refresh selbst aus (lebender ref),
+    // daher hier KEIN refreshCommunityDataFromWidget mehr (lief frueher auf
+    // dem bereits gepoppten Sheet-Ref und wurde nie ausgefuehrt).
+    await navigator.push<bool>(
       MaterialPageRoute(
         builder: (_) =>
             AddPlaceScreen(initialCenter: place.location, editPlace: place),
       ),
     );
-    if (changed ?? false) {
-      await refreshCommunityDataFromWidget(ref);
-    }
   }
 
   Future<void> _delete(
@@ -309,7 +309,17 @@ class _MyRatingRow extends StatelessWidget {
               ),
           ],
         ),
-        if (rating.tags.isNotEmpty)
+        if (rating.tags.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Deine Einschätzung:',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Wrap(
@@ -325,6 +335,7 @@ class _MyRatingRow extends StatelessWidget {
               ],
             ),
           ),
+        ],
       ],
     );
   }
@@ -362,15 +373,17 @@ class _AccessibilityBanner extends StatelessWidget {
     final ctx = place.venueContext;
     final parts = <String>['${ctx.emoji} ${ctx.label}'];
 
-    // Kosten-Aussage, ggf. mit Kontext-Hinweis.
+    // Kosten-Aussage (Stammdaten des Ortes), ggf. mit Kontext-Hinweis.
+    // Bewusst als "laut Angaben" formuliert -> klar von der subjektiven
+    // Community-Bewertung (Chips unten) abgegrenzt, kein Widerspruch.
     if (place.fee == true) {
       parts.add(
         ctx.accessRestricted
-            ? '💶 kostenpflichtig (Eintritt)'
-            : '💶 kostenpflichtig',
+            ? '💶 laut Angaben kostenpflichtig (Eintritt)'
+            : '💶 laut Angaben kostenpflichtig',
       );
     } else if (place.fee == false) {
-      parts.add('✅ kostenlos');
+      parts.add('✅ laut Angaben kostenlos');
     } else if (ctx.accessRestricted) {
       // fee unbekannt, aber Ort setzt typischerweise Eintritt/Konsum voraus.
       parts.add('ℹ️ evtl. Eintritt/Konsum');

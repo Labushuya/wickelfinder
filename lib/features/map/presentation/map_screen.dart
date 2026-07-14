@@ -114,10 +114,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
               TileLayer(
                 // Hell: OSM-Standardkacheln. Dunkel: CartoDB dark_all
                 // (kostenlos, ODbL/CARTO-konform bei genannter Attribution).
+                // {r}=@2x + retinaMode -> scharfe, lesbare Labels auf HiDPI.
                 urlTemplate: isDark
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                     : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 subdomains: isDark ? const ['a', 'b', 'c', 'd'] : const [],
+                retinaMode: isDark && RetinaMode.isHighDensity(context),
                 userAgentPackageName: 'de.wickelfinder.app',
                 tileProvider: TileCache.instanceOrNull()?.provider(),
               ),
