@@ -257,18 +257,26 @@ class _MapScreenState extends ConsumerState<MapScreen>
   bool _firstBBoxDone = false;
 
   void _onMapReady() {
+    _mapReady = true;
     unawaited(_initialCenterAndLoad());
   }
 
+  bool _mapReady = false;
+
   /// Sofort (ohne Animation) zum zuletzt bekannten Standort springen, damit
   /// kein Berlin-Zwischenzustand sichtbar ist. Danach echten GPS-Fix holen.
+  /// Robust gegen frueh-Kamera-Exceptions: jeder Schritt einzeln abgesichert.
   Future<void> _initialCenterAndLoad() async {
-    final last = await LocationService.lastKnown();
-    if (last != null && mounted) {
-      _mapController.move(last, 15);
-    }
+    try {
+      final last = await LocationService.lastKnown();
+      if (last != null && mounted && _mapReady) {
+        _mapController.move(last, 15);
+      }
+    } catch (_) {}
     _updateBBox(force: true); // ersten Load fuer den realen Viewport erzwingen
-    await _goToMyLocation(initial: true);
+    try {
+      await _goToMyLocation(initial: true);
+    } catch (_) {}
   }
 
   void _scheduleBBoxUpdate() {
@@ -279,31 +287,18 @@ class _MapScreenState extends ConsumerState<MapScreen>
   void _updateBBox({bool force = false}) {
     if (!mounted) return;
     final bounds = _mapController.camera.visibleBounds;
-    final next = BBox(
+    // Gerastert + erweitert -> gleiche Box bei kleinen Bewegungen (== greift),
+    // Pins am Rand werden mitgeladen.
+    final next = BBox.snappedFrom(
       south: bounds.south,
       west: bounds.west,
       north: bounds.north,
       east: bounds.east,
     );
-    // Erster Load immer; danach nur bei WESENTLICHER Verschiebung (kein Takt).
-    if (!force && _firstBBoxDone && !_bboxChangedSignificantly(_bbox, next)) {
-      return;
-    }
+    // Erster Load immer; danach nur wenn sich die (gerasterte) Box aendert.
+    if (!force && _firstBBoxDone && next == _bbox) return;
     _firstBBoxDone = true;
     setState(() => _bbox = next);
-  }
-
-  static bool _bboxChangedSignificantly(BBox a, BBox b) {
-    final latSpan = (a.north - a.south).abs();
-    final lonSpan = (a.east - a.west).abs();
-    final centerLatMoved = (((a.north + a.south) - (b.north + b.south)) / 2)
-        .abs();
-    final centerLonMoved = (((a.east + a.west) - (b.east + b.west)) / 2).abs();
-    final zoomChanged =
-        ((latSpan - (b.north - b.south).abs()).abs() > latSpan * 0.25);
-    return zoomChanged ||
-        centerLatMoved > latSpan * 0.3 ||
-        centerLonMoved > lonSpan * 0.3;
   }
 
   /// Sanfte animierte Kamerafahrt zum Ziel (statt instantem Sprung).
