@@ -66,6 +66,16 @@ final statsProvider = FutureProvider.family<PlaceStats, String>((
   return map[placeRef] ?? PlaceStats.empty(placeRef);
 });
 
+/// Die EIGENE Bewertung fuer einen place_ref (null wenn noch nicht bewertet).
+final myRatingProvider = FutureProvider.family<MyRating?, String>((
+  ref,
+  placeRef,
+) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return null;
+  return repo.myRating(placeRef);
+});
+
 /// Eigene Community-Plaetze fuer den "Meine Pins"-Screen (direkt vom Server,
 /// da RLS-gefiltert auf die eigene Identitaet).
 final myPlacesProvider = FutureProvider<List<ChangingPlace>>((ref) async {
