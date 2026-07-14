@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../community/domain/place_stats.dart';
-import '../../community/domain/place_tag.dart';
 import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
