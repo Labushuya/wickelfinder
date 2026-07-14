@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../community/domain/place_stats.dart';
+import '../../community/domain/place_tag.dart';
+import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/rate_place_dialog.dart';
@@ -19,8 +21,15 @@ class PlaceDetailSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final repo = ref.watch(communityRepositoryProvider);
+    // Immer die FRISCHESTE Version des Pins aus dem Akkumulator lesen, damit
+    // Admin-/Eigen-Edits sofort sichtbar sind (nicht die beim Oeffnen
+    // uebergebene, evtl. veraltete Instanz).
+    final place =
+        ref.watch(accumulatedPlacesProvider).byRef[this.place.placeRef] ??
+        this.place;
     final statsAsync = ref.watch(statsProvider(place.placeRef));
     final stats = statsAsync.valueOrNull ?? PlaceStats.empty(place.placeRef);
+    final myRating = ref.watch(myRatingProvider(place.placeRef)).valueOrNull;
 
     // Bearbeiten/Loeschen anbieten, wenn eigener Community-Pin ODER Admin.
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
@@ -51,6 +60,10 @@ class PlaceDetailSheet extends ConsumerWidget {
           Text(place.name ?? 'Wickelplatz', style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           _RatingSummary(stats: stats),
+          if (myRating != null) ...[
+            const SizedBox(height: 6),
+            _MyRatingRow(rating: myRating),
+          ],
           const SizedBox(height: 12),
           _AccessibilityBanner(place: place),
           const SizedBox(height: 4),
@@ -75,8 +88,8 @@ class PlaceDetailSheet extends ConsumerWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 icon: const Icon(Icons.star_outline),
-                label: const Text('Bewerten'),
-                onPressed: () => _rate(context, ref, repo),
+                label: Text(myRating == null ? 'Bewerten' : 'Bewertung ändern'),
+                onPressed: () => _rate(context, ref, repo, myRating),
               ),
             ),
             if (canManage) ...[
@@ -167,10 +180,16 @@ class PlaceDetailSheet extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     CommunityRepository repo,
+    MyRating? existing,
   ) async {
     // Messenger VOR dem await erfassen -> kein BuildContext-Zugriff nach async gap.
     final messenger = ScaffoldMessenger.of(context);
-    final input = await RatePlaceDialog.show(context);
+    // Vorherige Bewertung vorbefuellen (Aendern statt leer starten).
+    final input = await RatePlaceDialog.show(
+      context,
+      initialStars: existing?.stars,
+      initialTags: existing?.tags,
+    );
     if (input == null) return;
 
     try {
@@ -179,10 +198,15 @@ class PlaceDetailSheet extends ConsumerWidget {
         stars: input.stars,
         tags: input.tags,
       );
-      // Frische Stats laden -> Anzeige aktualisiert sich.
+      // Eigene Bewertung + Aggregat neu laden -> Anzeige aktualisiert sich.
+      ref.invalidate(myRatingProvider(place.placeRef));
       ref.invalidate(statsProvider(place.placeRef));
       messenger.showSnackBar(
-        const SnackBar(content: Text('Danke für deine Bewertung!')),
+        SnackBar(
+          content: Text(
+            'Deine ${input.stars}-Sterne-Bewertung wurde gespeichert.',
+          ),
+        ),
       );
     } on CommunityException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
@@ -228,6 +252,51 @@ class _RatingSummary extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Zeigt die EIGENE Bewertung (unverfaelscht) + gewaehlte Tags.
+class _MyRatingRow extends StatelessWidget {
+  const _MyRatingRow({required this.rating});
+  final MyRating rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Deine Bewertung: ', style: theme.textTheme.bodySmall),
+            for (var i = 1; i <= 5; i++)
+              Icon(
+                i <= rating.stars
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+                size: 18,
+                color: Colors.amber,
+              ),
+          ],
+        ),
+        if (rating.tags.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final t in rating.tags)
+                  Chip(
+                    label: Text(t.label),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }

@@ -6,6 +6,13 @@ import '../domain/place_stats.dart';
 import '../domain/place_tag.dart';
 import 'anon_session.dart';
 
+/// Die eigene Bewertung eines Platzes (Sterne + gewaehlte Tags).
+class MyRating {
+  const MyRating({required this.stars, required this.tags});
+  final int stars;
+  final Set<PlaceTag> tags;
+}
+
 /// Fehler aus einem Community-RPC, mit maschinenlesbarem [code]
 /// (z. B. 'rate_limit', 'self_rating', 'auth_required').
 class CommunityException implements Exception {
@@ -77,6 +84,32 @@ class CommunityRepository {
     } on PostgrestException catch (e) {
       // RPC-raise landet in message/code -> auf bekannte Codes mappen.
       throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Liest die EIGENE Bewertung fuer einen Platz (RLS: nur eigene Zeile).
+  /// Null, wenn noch nicht bewertet oder keine Session.
+  Future<MyRating?> myRating(String placeRef) async {
+    if (_session.currentUserId == null) return null;
+    try {
+      final rows = await _client
+          .from('ratings')
+          .select('stars, tags')
+          .eq('place_ref', placeRef)
+          .eq('user_id', _session.currentUserId!)
+          .limit(1);
+      if (rows.isEmpty) return null;
+      final row = rows.first;
+      final wireTags = (row['tags'] as List?)?.cast<String>() ?? const [];
+      return MyRating(
+        stars: (row['stars'] as num).toInt(),
+        tags: {
+          for (final w in wireTags)
+            ...PlaceTag.values.where((t) => t.wire == w),
+        },
+      );
+    } catch (_) {
+      return null;
     }
   }
 
