@@ -130,7 +130,7 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'Bitte keine persönlichen Daten Dritter eingeben.',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                  style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
                 ),
               ],
             ),

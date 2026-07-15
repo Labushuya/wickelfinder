@@ -147,7 +147,7 @@ class _Empty extends ConsumerWidget {
                 'Tippe auf der Karte auf „Platz melden", um deinen ersten '
                 'Wickelplatz hinzuzufügen.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(

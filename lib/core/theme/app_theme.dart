@@ -44,6 +44,17 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      // Global etwas kleinere Typo (weiterhin gut lesbar), damit Text nicht den
+      // ganzen Raum einnimmt. Ein Eingriff -> wirkt ueber alle textTheme.*.
+      textTheme:
+          (isLight
+                  ? Typography.material2021(
+                      platform: defaultTargetPlatform,
+                    ).black
+                  : Typography.material2021(
+                      platform: defaultTargetPlatform,
+                    ).white)
+              .apply(fontSizeFactor: 0.93),
       scaffoldBackgroundColor: surfaceColor,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
@@ -93,10 +104,17 @@ abstract final class AppTheme {
       chipTheme: ChipThemeData(
         selectedColor: isLight ? AppColors.accentSoft : AppColors.primaryDeep,
         checkmarkColor: isLight ? AppColors.primaryDeep : Colors.white,
+        // Kein Checkmark -> Chip-Breite bleibt beim Selektieren konstant,
+        // kein Umbruch-Sprung im Wrap.
+        showCheckmark: false,
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         secondarySelectedColor: isLight
             ? AppColors.accentSoft
             : AppColors.primaryDeep,
-        labelStyle: TextStyle(color: scheme.onSurface),
+        labelStyle: TextStyle(color: scheme.onSurface, fontSize: 13),
         backgroundColor: isLight
             ? Colors.white
             : scheme.surfaceContainerHighest,
