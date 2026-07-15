@@ -11,6 +11,7 @@ import '../../../core/map/tile_cache.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/settings_screen.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/widgets/bottom_toast.dart';
 import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/all_places_screen.dart';
@@ -392,9 +393,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final pos = await LocationService.current();
     if (pos == null) {
       if (!initial && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Standort nicht verfügbar.')),
-        );
+        showBottomToast(context, 'Standort nicht verfügbar.');
       }
       return;
     }
