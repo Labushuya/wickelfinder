@@ -51,7 +51,10 @@ class _AllPlacesScreenState extends ConsumerState<AllPlacesScreen> {
                           ),
                           itemCount: places.length,
                           separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (_, i) => PlaceTile(place: places[i]),
+                          itemBuilder: (_, i) => PlaceTile(
+                            place: places[i],
+                            onTap: () => Navigator.of(context).pop(places[i]),
+                          ),
                         ),
                 ),
               ),

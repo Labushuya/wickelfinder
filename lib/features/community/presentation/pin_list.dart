@@ -40,13 +40,17 @@ bool pinMatchesQuery(ChangingPlace p, String query) {
 /// funktionieren beide Aktionen serverseitig auch auf fremden Pins
 /// (created_by = uid OR admin).
 class PlaceTile extends ConsumerWidget {
-  const PlaceTile({super.key, required this.place});
+  const PlaceTile({super.key, required this.place, this.onTap});
 
   final ChangingPlace place;
+
+  /// Optional: Tap auf die Zeile (z. B. Liste schliessen + zur Karte fliegen).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
+      onTap: onTap,
       leading: const Icon(Icons.location_on),
       title: Text(place.name ?? 'Wickelplatz'),
       subtitle: Text(
