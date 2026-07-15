@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/bottom_toast.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../community/domain/place_stats.dart';
@@ -178,7 +179,6 @@ class PlaceDetailSheet extends ConsumerWidget {
     WidgetRef ref,
     CommunityRepository repo,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final ok = await showDialog<bool>(
       context: context,
@@ -204,11 +204,9 @@ class PlaceDetailSheet extends ConsumerWidget {
       await repo.deletePlace(place.id);
       await refreshCommunityDataFromWidget(ref);
       navigator.pop(); // Detail-Sheet schliessen
-      messenger.showSnackBar(const SnackBar(content: Text('Platz gelöscht.')));
+      if (context.mounted) showBottomToast(context, 'Platz gelöscht.');
     } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Löschen fehlgeschlagen.')),
-      );
+      if (context.mounted) showBottomToast(context, 'Löschen fehlgeschlagen.');
     }
   }
 
@@ -218,8 +216,6 @@ class PlaceDetailSheet extends ConsumerWidget {
     CommunityRepository repo,
     MyRating? existing,
   ) async {
-    // Messenger VOR dem await erfassen -> kein BuildContext-Zugriff nach async gap.
-    final messenger = ScaffoldMessenger.of(context);
     // Vorherige Bewertung vorbefuellen (Aendern statt leer starten).
     final input = await RatePlaceDialog.show(
       context,
@@ -237,21 +233,19 @@ class PlaceDetailSheet extends ConsumerWidget {
       // Eigene Bewertung + Aggregat neu laden -> Anzeige aktualisiert sich.
       ref.invalidate(myRatingProvider(place.placeRef));
       ref.invalidate(statsProvider(place.placeRef));
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Deine ${input.stars}-Sterne-Bewertung wurde gespeichert.',
-          ),
-        ),
-      );
+      if (context.mounted) {
+        showBottomToast(
+          context,
+          'Deine ${input.stars}-Sterne-Bewertung wurde gespeichert.',
+        );
+      }
     } on CommunityException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.userMessage)));
+      if (context.mounted) showBottomToast(context, e.userMessage);
     } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Bewertung fehlgeschlagen. Bitte später erneut.'),
-        ),
-      );
+      if (context.mounted) {
+        showBottomToast(context, 'Bewertung fehlgeschlagen. Bitte später erneut.');
+      }
+    }
     }
   }
 }
