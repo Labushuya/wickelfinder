@@ -133,11 +133,11 @@ abstract final class AppTheme {
       // Info-/Statusmeldungen markant in Markenoptik statt Default-Grau
       // Info-/Statusmeldungen markant in Markenoptik statt Default-Grau
       // (Material-Default waere inverseSurface = dunkles Grau).
-      // behavior: fixed -> SnackBar klebt am UNTEREN Rand ueber die volle
-      // Breite, UNTERHALB der FABs (Standort/Platz melden), statt als floating
-      // ueber ihnen zu erscheinen.
+      // floating = schmales, gerundetes Banner (nicht die volle Bodenflaeche).
+      // Kleiner bottom-margin haelt es am unteren Rand; die FABs sitzen darueber
+      // und werden von einer floating-SnackBar NICHT hochgeschoben.
       snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.fixed,
+        behavior: SnackBarBehavior.floating,
         backgroundColor: isLight ? AppColors.primary : AppColors.darkPrimary,
         contentTextStyle: TextStyle(
           color: isLight ? Colors.white : AppColors.ink,
@@ -145,6 +145,8 @@ abstract final class AppTheme {
         ),
         actionTextColor: isLight ? AppColors.accentSoft : AppColors.ink,
         elevation: 4,
+        insetPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }

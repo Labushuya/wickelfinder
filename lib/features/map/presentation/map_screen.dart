@@ -13,8 +13,10 @@ import '../../../core/theme/settings_screen.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
+import '../../community/presentation/all_places_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/my_places_screen.dart';
+import '../../admin/data/auth_repository.dart';
 import '../../search/presentation/address_search_bar.dart';
 import '../../updater/presentation/update_sheet.dart';
 import '../domain/changing_place.dart';
@@ -112,6 +114,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final hasBackend = ref.watch(communityRepositoryProvider) != null;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
 
     return Scaffold(
       body: Stack(
@@ -167,7 +170,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   Expanded(
                     child: AddressSearchBar(
                       onSelected: _goTo,
-                      trailing: _buildMenu(hasBackend),
+                      trailing: _buildMenu(hasBackend, isAdmin),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -237,7 +240,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
   }
 
-  Widget _buildMenu(bool hasBackend) {
+  Widget _buildMenu(bool hasBackend, bool isAdmin) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert),
       onSelected: (v) {
@@ -247,6 +250,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
           Navigator.of(
             context,
           ).push(MaterialPageRoute(builder: (_) => const MyPlacesScreen()));
+        } else if (v == 'all_pins') {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const AllPlacesScreen()));
         } else if (v == 'settings') {
           Navigator.of(
             context,
@@ -262,6 +269,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 Icon(Icons.push_pin_outlined, size: 20),
                 SizedBox(width: 10),
                 Text('Meine Pins'),
+              ],
+            ),
+          ),
+        if (hasBackend && isAdmin)
+          const PopupMenuItem(
+            value: 'all_pins',
+            child: Row(
+              children: [
+                Icon(Icons.list_alt, size: 20),
+                SizedBox(width: 10),
+                Text('Alle Pins [Admin]'),
               ],
             ),
           ),
