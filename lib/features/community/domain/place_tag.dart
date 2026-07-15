@@ -10,7 +10,12 @@ enum PlaceTag {
   noDisposal('no_disposal', 'Keine Entsorgung'),
   cramped('cramped', 'Eng / wenig Platz'),
   separateRoom('separate_room', 'Separater Raum'),
-  sink('sink', 'Waschbecken vorhanden');
+  sink('sink', 'Waschbecken vorhanden'),
+  // Zugangs-Bedingungs-Tags (Migration 11).
+  guestsOnly('guests_only', 'Nur für Gäste/Kunden'),
+  entryFee('entry_fee', 'Eintritt nötig'),
+  freeAccess('free_access', 'Frei zugänglich'),
+  askStaff('ask_staff', 'Schlüssel/Personal fragen');
 
   const PlaceTag(this.wire, this.label);
 
@@ -29,6 +34,15 @@ enum PlaceTag {
     noDisposal => disposal,
     largeSurface => cramped,
     cramped => largeSurface,
+    freeAccess => entryFee,
+    entryFee => freeAccess,
     _ => null,
   };
+
+  /// Zugangs-Bedingungs-Tags (getrennter Block im Bewertungs-/Melde-UI).
+  static const accessTags = [guestsOnly, entryFee, freeAccess, askStaff];
+
+  /// Eigenschafts-Tags (Sauberkeit, Ausstattung …) ohne die Zugangs-Tags.
+  static List<PlaceTag> get propertyTags =>
+      values.where((t) => !accessTags.contains(t)).toList();
 }

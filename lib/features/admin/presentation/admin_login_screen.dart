@@ -17,7 +17,24 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _remember = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Gespeicherte Zugangsdaten vorbefuellen (falls "Angemeldet bleiben").
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final repo = ref.read(authRepositoryProvider);
+      final creds = await repo?.savedCredentials();
+      if (creds != null && mounted) {
+        setState(() {
+          _email.text = creds.email;
+          _password.text = creds.password;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -35,7 +52,11 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     });
     final navigator = Navigator.of(context);
     try {
-      await repo.signInAdmin(_email.text.trim(), _password.text);
+      await repo.signInAdminRemember(
+        _email.text.trim(),
+        _password.text,
+        remember: _remember,
+      );
       ref.invalidate(isAdminProvider);
       final isAdmin = await repo.checkIsAdmin();
       if (!mounted) return;
@@ -90,7 +111,17 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Angemeldet bleiben'),
+                subtitle: const Text(
+                  'Zugangsdaten verschlüsselt auf dem Gerät',
+                ),
+                value: _remember,
+                onChanged: _busy ? null : (v) => setState(() => _remember = v),
+              ),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(

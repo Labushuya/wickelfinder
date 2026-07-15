@@ -84,6 +84,13 @@ final myPlacesProvider = FutureProvider<List<ChangingPlace>>((ref) async {
   return repo.myPlaces();
 });
 
+/// ALLE Community-Plaetze (nur Admin). Leere Liste ohne Adminrecht.
+final adminAllPlacesProvider = FutureProvider<List<ChangingPlace>>((ref) async {
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return const [];
+  return repo.adminAllPlaces();
+});
+
 /// Nach einer Schreibaktion Cache + Ansichten aktualisieren (ohne Reload-Sturm).
 Future<void> refreshCommunityData(Ref ref) async {
   await ref.read(communityPlacesProvider.notifier).refresh();

@@ -22,6 +22,32 @@ import 'hold_to_label_fab.dart';
 import 'map_providers.dart';
 import 'place_detail_sheet.dart';
 
+/// Farbmatrix fuer den Dark-Mode der Karte: Invert × Hue-Rotate(180°).
+/// Kehrt Helligkeit um (weiss->dunkel), erhaelt aber Farbtoene grob
+/// (Wasser bleibt blaeulich, Parks gruenlich) statt platt zu invertieren.
+const List<double> _darkMapMatrix = <double>[
+  0.5740,
+  -1.4300,
+  -0.1440,
+  0.0,
+  255.0,
+  -0.4260,
+  -0.4300,
+  -0.1440,
+  0.0,
+  255.0,
+  -0.4260,
+  -1.4300,
+  0.8560,
+  0.0,
+  255.0,
+  0.0,
+  0.0,
+  0.0,
+  1.0,
+  0.0,
+];
+
 /// Hauptscreen: Karte mit Wickelplatz-Pins, Adresssuche und Standort.
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -112,18 +138,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ),
             children: [
               TileLayer(
-                // Hell: OSM-Standardkacheln. Dunkel: CartoDB Voyager
-                // (farbig getoent -> Parks gruen, Wasser blau, Gebaeude
-                // abgesetzt; mehr Details als das flaechige dark_all).
-                // Kostenlos, ODbL/CARTO-konform bei genannter Attribution.
-                // {r}=@2x + retinaMode -> scharfe, lesbare Labels auf HiDPI.
-                urlTemplate: isDark
-                    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: isDark ? const ['a', 'b', 'c', 'd'] : const [],
-                retinaMode: isDark && RetinaMode.isHighDensity(context),
+                // Immer OSM-Kacheln. Im Dark-Mode per tileBuilder ein
+                // Invert×Hue-Rotate(180°)-Farbfilter -> dunkle Karte, aber
+                // Wasser bleibt blaeulich, Parks gruenlich (kein Falschfarben-
+                // Invert). Alle OSM-Details bleiben erhalten.
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'de.wickelfinder.app',
                 tileProvider: TileCache.instanceOrNull()?.provider(),
+                tileBuilder: isDark
+                    ? (context, tileWidget, tile) => ColorFiltered(
+                        colorFilter: const ColorFilter.matrix(_darkMapMatrix),
+                        child: tileWidget,
+                      )
+                    : null,
               ),
               MarkerLayer(markers: _buildMarkers(accumulated.all)),
             ],
@@ -171,9 +198,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 alignment: Alignment.center,
                 color: theme.colorScheme.surface.withValues(alpha: 0.7),
                 child: Text(
-                  isDark
-                      ? '© OpenStreetMap-Mitwirkende, © CARTO'
-                      : '© OpenStreetMap-Mitwirkende',
+                  '© OpenStreetMap-Mitwirkende',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

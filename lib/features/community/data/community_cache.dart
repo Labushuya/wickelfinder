@@ -90,6 +90,7 @@ class CommunityCache {
             name: row['name'] as String?,
             wheelchairAccessible: row['wheelchair'] as bool?,
             fee: row['fee'] as bool?,
+            feeMode: FeeMode.fromWire(row['fee_mode'] as String?),
             locationHint: row['location_hint'] as String?,
             source: PlaceSource.community,
           );
@@ -128,6 +129,7 @@ class CommunityCache {
     'name': p.name,
     'wheelchair': p.wheelchairAccessible,
     'fee': p.fee,
+    'fee_mode': p.feeMode?.wire,
     'hint': p.locationHint,
   };
 
@@ -142,6 +144,7 @@ class CommunityCache {
       name: j['name'] as String?,
       wheelchairAccessible: j['wheelchair'] as bool?,
       fee: j['fee'] as bool?,
+      feeMode: FeeMode.fromWire(j['fee_mode'] as String?),
       locationHint: j['hint'] as String?,
       source: PlaceSource.community,
     );
