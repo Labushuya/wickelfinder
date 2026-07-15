@@ -476,45 +476,45 @@ class _AccessibilityBanner extends StatelessWidget {
   /// Regel: Stammdaten fuehren; Community relativiert sichtbar (Ampel + Hinweis),
   /// ueberschreibt aber nicht. "bedingt" hat keinen direkten free/paid-Gegenpol
   /// -> nur neutrale Info.
-  static CostConsensus costConsensus(FeeMode? mode, int free, int paid) {
-    if (free == 0 && paid == 0) return const CostConsensus();
+  static _CostConsensus costConsensus(FeeMode? mode, int free, int paid) {
+    if (free == 0 && paid == 0) return const _CostConsensus();
     if (mode == FeeMode.paid && free > paid) {
-      return CostConsensus(
+      return _CostConsensus(
         badge: _Trust.disputed,
         note: '⚠ $free× als kostenlos gemeldet',
         icon: Icons.warning_amber,
       );
     }
     if (mode == FeeMode.free && paid > free) {
-      return CostConsensus(
+      return _CostConsensus(
         badge: _Trust.disputed,
         note: '⚠ $paid× als kostenpflichtig gemeldet',
         icon: Icons.warning_amber,
       );
     }
     if (mode == FeeMode.paid && paid > free) {
-      return CostConsensus(
+      return _CostConsensus(
         badge: _Trust.confirmed,
         note: 'von $paid bestätigt',
         icon: Icons.check,
       );
     }
     if (mode == FeeMode.free && free > paid) {
-      return CostConsensus(
+      return _CostConsensus(
         badge: _Trust.confirmed,
         note: 'von $free bestätigt',
         icon: Icons.check,
       );
     }
-    return const CostConsensus();
+    return const _CostConsensus();
   }
 }
 
 enum _Trust { confirmed, disputed }
 
 /// Ergebnis des Kosten-Konsens-Abgleichs: optionale Ampel + Hinweiszeile.
-class CostConsensus {
-  const CostConsensus({this.badge, this.note, this.icon = Icons.info_outline});
+class _CostConsensus {
+  const _CostConsensus({this.badge, this.note, this.icon = Icons.info_outline});
   final _Trust? badge;
   final String? note;
   final IconData icon;
