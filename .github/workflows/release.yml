@@ -83,6 +83,115 @@ jobs:
       - name: App-Icons generieren (Adaptive + Legacy)
         run: dart run flutter_launcher_icons
 
+      # Release-Signierung einrichten: Keystore aus GitHub-Secrets rekonstruieren
+      # und eine signingConfig in das (von `flutter create` generierte)
+      # build.gradle.kts injizieren. Ohne diesen Schritt signiert Flutter mit dem
+      # WECHSELNDEN Debug-Key -> Updates scheitern mit INSTALL_FAILED_UPDATE_
+      # INCOMPATIBLE. Fehlt das Keystore-Secret, wird der Schritt uebersprungen
+      # (Build bleibt debug-signiert, statt hart zu failen). Idempotent + fail-fast.
+      - name: Release-Signierung einrichten
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 fehlt -> APK bleibt debug-signiert (Updates erfordern Deinstallieren)."
+            exit 0
+          fi
+
+          # 1) Keystore rekonstruieren (nie geloggt).
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.jks
+
+          # 2) key.properties schreiben (Werte aus Secrets, nicht im Log).
+          cat > android/key.properties <<EOF
+          storeFile=release.jks
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          EOF
+
+          # 3) signingConfig in build.gradle.kts (Flutter 3.35 = Kotlin-DSL)
+          #    bzw. build.gradle (Groovy-Fallback) idempotent injizieren.
+          #    Python-basiert -> robuster als sed fuer die mehrzeiligen Bloecke.
+          python3 - <<'PY'
+          import re, pathlib, sys
+          kts = pathlib.Path("android/app/build.gradle.kts")
+          groovy = pathlib.Path("android/app/build.gradle")
+
+          if kts.exists():
+              p = kts
+              src = p.read_text()
+              if 'release.jks' in src or 'keystoreProperties' in src:
+                  print("release signing already configured (kts)"); sys.exit(0)
+              # Properties laden — direkt nach der Plugins-/erste-Zeile einfuegen.
+              header = (
+                  'import java.util.Properties\n'
+                  'import java.io.FileInputStream\n'
+                  'val keystoreProperties = Properties()\n'
+                  'val keystorePropertiesFile = rootProject.file("key.properties")\n'
+                  'if (keystorePropertiesFile.exists()) {\n'
+                  '    keystoreProperties.load(FileInputStream(keystorePropertiesFile))\n'
+                  '}\n'
+              )
+              src = header + src
+              # signingConfigs-Block direkt nach "android {" einfuegen.
+              sign_block = (
+                  '\n    signingConfigs {\n'
+                  '        create("release") {\n'
+                  '            keyAlias = keystoreProperties["keyAlias"] as String\n'
+                  '            keyPassword = keystoreProperties["keyPassword"] as String\n'
+                  '            storeFile = file(keystoreProperties["storeFile"] as String)\n'
+                  '            storePassword = keystoreProperties["storePassword"] as String\n'
+                  '        }\n'
+                  '    }\n'
+              )
+              src = re.sub(r'android\s*\{', 'android {' + sign_block, src, count=1)
+              # release-buildType auf die release-signingConfig umstellen.
+              src = re.sub(
+                  r'signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)',
+                  'signingConfig = signingConfigs.getByName("release")',
+                  src, count=1)
+              p.write_text(src)
+              assert 'signingConfigs.getByName("release")' in p.read_text(), "kts inject failed"
+              print("release signing configured (kts)")
+          elif groovy.exists():
+              p = groovy
+              src = p.read_text()
+              if 'release.jks' in src:
+                  print("release signing already configured (groovy)"); sys.exit(0)
+              header = (
+                  'def keystoreProperties = new Properties()\n'
+                  'def keystorePropertiesFile = rootProject.file("key.properties")\n'
+                  'if (keystorePropertiesFile.exists()) {\n'
+                  '    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }\n'
+                  '}\n'
+              )
+              src = header + src
+              sign_block = (
+                  '\n    signingConfigs {\n'
+                  '        release {\n'
+                  '            keyAlias keystoreProperties["keyAlias"]\n'
+                  '            keyPassword keystoreProperties["keyPassword"]\n'
+                  '            storeFile file(keystoreProperties["storeFile"])\n'
+                  '            storePassword keystoreProperties["storePassword"]\n'
+                  '        }\n'
+                  '    }\n'
+              )
+              src = re.sub(r'android\s*\{', 'android {' + sign_block, src, count=1)
+              src = re.sub(
+                  r'signingConfig\s+signingConfigs\.debug',
+                  'signingConfig signingConfigs.release',
+                  src, count=1)
+              p.write_text(src)
+              assert 'signingConfigs.release' in p.read_text(), "groovy inject failed"
+              print("release signing configured (groovy)")
+          else:
+              print("::error::weder build.gradle.kts noch build.gradle gefunden"); sys.exit(1)
+          PY
+
       # Supabase-Zugang wird zur Build-Zeit einkompiliert (--dart-define).
       # Werte aus GitHub-Secrets; anon-key ist client-safe (RLS schuetzt die DB).
       - name: Release-APK bauen
