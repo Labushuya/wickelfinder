@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/admin/data/auth_repository.dart';
 import '../../features/admin/presentation/admin_login_screen.dart';
-import '../../features/community/presentation/all_places_screen.dart';
 import 'theme_controller.dart';
 
 /// Einstellungen-Screen. Aktuell: Darstellung (hell/dunkel/System).
@@ -101,7 +100,7 @@ class _AdminSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionHeader('Verwaltung'),
-        if (isAdmin) ...[
+        if (isAdmin)
           ListTile(
             leading: const Icon(Icons.verified_user, color: Colors.green),
             title: const Text('Als Admin angemeldet'),
@@ -113,18 +112,8 @@ class _AdminSection extends ConsumerWidget {
               },
               child: const Text('Abmelden'),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.list_alt),
-            title: const Text('Alle Pins [Admin]'),
-            subtitle: const Text(
-              'Alle Community-Pins durchsuchen & verwalten.',
-            ),
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const AllPlacesScreen())),
-          ),
-        ] else
+          )
+        else
           ListTile(
             leading: const Icon(Icons.admin_panel_settings_outlined),
             title: const Text('Admin-Anmeldung'),
