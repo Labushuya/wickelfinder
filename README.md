@@ -20,9 +20,12 @@ Plätze melden, bewerten und gegenseitig verifizieren.
 
 - 🗺️ **Karte** mit Wickelplätzen in der Umgebung (OpenStreetMap)
 - 📍 **Standortbasierte Suche** – finde den nächsten Wickeltisch
-- ♿ **Details** zu Barrierefreiheit, Kosten und Lage
-- ➕ **Community** *(geplant)*: Plätze hinzufügen, bewerten, verifizieren
-- 🔒 **Datensparsam**: keine Tracker, anonyme Nutzung, Standort bleibt on-device
+- ♿ **Details** zu Barrierefreiheit, Kosten (kostenlos/bedingt/kostenpflichtig) und Lage
+- ⭐ **Bewerten & Melden** ohne Konto (anonym): Sterne, Eigenschafts-Tags, „nicht vorhanden"
+- 🧑‍🤝‍🧑 **Community-Konsens**: Feedback vieler Nutzer relativiert die Angaben sichtbar
+- 👤 **Optionales Konto** (E-Mail): eigene Plätze hinzufügen & verwalten, „Meine Pins"
+- 🌗 **Hell-/Dunkel-Modus**, Offline-Karten-Cache, In-App-Updater
+- 🔒 **Datensparsam & DSGVO**: keine Tracker, Standort on-device, Datenexport & Löschung in der App
 
 ## 📥 Installation
 

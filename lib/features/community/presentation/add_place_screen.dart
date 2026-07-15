@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../admin/data/auth_repository.dart';
 import '../../map/domain/changing_place.dart';
 import '../data/community_repository.dart';
 import 'community_providers.dart';
@@ -162,6 +163,14 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
     if (repo == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    // Zweite Verteidigungslinie: Pin-Erstellen/-Bearbeiten nur mit Konto
+    // (verhindert, dass hier eine anonyme Session angelegt/genutzt wird).
+    if (!ref.read(isLoggedInProvider)) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Zum Speichern bitte anmelden.')),
+      );
+      return;
+    }
     setState(() => _saving = true);
 
     String? emptyToNull(String s) => s.trim().isEmpty ? null : s.trim();

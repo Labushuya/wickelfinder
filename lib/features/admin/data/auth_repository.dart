@@ -24,10 +24,50 @@ class AuthRepository {
   bool get isSignedInNonAnon =>
       currentUser != null && (currentUser!.isAnonymous == false);
 
+  /// True, wenn gerade nur eine anonyme (lazy) Session besteht.
+  bool get isAnonymous => currentUser?.isAnonymous ?? false;
+
   Stream<AuthState> get changes => _client.auth.onAuthStateChange;
 
+  // --- Login (Admin wie normales Konto — identischer Passwort-Login) --------
   Future<void> signInAdmin(String email, String password) =>
       _client.auth.signInWithPassword(email: email, password: password);
+
+  /// Alias fuer normale Konten (semantisch klarer; gleiche Wirkung).
+  Future<void> signIn(String email, String password) =>
+      signInAdmin(email, password);
+
+  // --- Registrierung + Identity-Linking + Passwort-Reset --------------------
+
+  /// Registrierung eines NEUEN Kontos (E-Mail-Bestaetigung aktiv ->
+  /// res.session bleibt null bis zur Bestaetigung).
+  Future<AuthResponse> signUp(String email, String password) =>
+      _client.auth.signUp(email: email, password: password);
+
+  /// Identity-Linking Schritt 1: an eine bestehende ANONYME Session eine
+  /// E-Mail haengen (loest Bestaetigungs-/OTP-Mail aus). user_id bleibt gleich.
+  Future<void> addEmailToAnonymous(String email) =>
+      _client.auth.updateUser(UserAttributes(email: email));
+
+  /// OTP-Bestaetigung (6-stelliger Code aus der Mail). type=emailChange beim
+  /// Anonymous-Upgrade, type=signup bei Neu-Registrierung, type=recovery bei
+  /// Passwort-Reset.
+  Future<void> verifyEmailOtp({
+    required String email,
+    required String token,
+    required OtpType type,
+  }) async {
+    await _client.auth.verifyOTP(email: email, token: token, type: type);
+  }
+
+  /// Identity-Linking Schritt 3 bzw. Reset-Abschluss: Passwort setzen
+  /// (erst NACH verifizierter E-Mail moeglich).
+  Future<void> setPassword(String password) =>
+      _client.auth.updateUser(UserAttributes(password: password));
+
+  /// Passwort-Reset anfordern (Mail mit OTP/Link).
+  Future<void> resetPassword(String email) =>
+      _client.auth.resetPasswordForEmail(email);
 
   /// Login + optional Zugangsdaten verschluesselt speichern (Auto-Login).
   Future<void> signInAdminRemember(
@@ -136,4 +176,21 @@ final isAdminProvider = FutureProvider<bool>((ref) async {
   final repo = ref.watch(authRepositoryProvider);
   if (repo == null) return false;
   return repo.checkIsAdmin();
+});
+
+/// True, wenn ein ECHTES Konto (nicht nur anonym) eingeloggt ist. Zentrales
+/// Gate fuer konto-pflichtige Aktionen (Pin erstellen/verwalten, Meine Pins).
+final isLoggedInProvider = Provider<bool>((ref) {
+  ref.watch(authChangesProvider);
+  final repo = ref.watch(authRepositoryProvider);
+  return repo?.isSignedInNonAnon ?? false;
+});
+
+/// Die aktuelle E-Mail des eingeloggten Kontos (null wenn anonym/kein Konto).
+final currentAccountEmailProvider = Provider<String?>((ref) {
+  ref.watch(authChangesProvider);
+  final repo = ref.watch(authRepositoryProvider);
+  final u = repo?.currentUser;
+  if (u == null || u.isAnonymous) return null;
+  return u.email;
 });

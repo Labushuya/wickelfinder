@@ -64,6 +64,9 @@ technisch deine IP-Adresse an diese Server übermittelt. Es gelten die
 - **Supabase** (Hosting der Datenbank, Authentifizierung, Serverfunktionen).
   Verarbeitungsregion: **EU (Frankfurt)**. Mit Supabase besteht ein
   Auftragsverarbeitungsvertrag (DPA).
+- **E-Mail-Versanddienstleister (SMTP)** für Bestätigungs- und Passwort-Reset-
+  Mails, sofern du ein Konto anlegst. Der konkrete Anbieter ist im
+  Betreiber-Setup konfiguriert; mit ihm besteht ebenfalls ein AV-Vertrag.
 
 ## 7. Welche Daten wir speichern und warum
 
@@ -74,7 +77,8 @@ technisch deine IP-Adresse an diese Server übermittelt. Es gelten die
 | Bestätigungen | Platz-Referenz, Zeitstempel | „existiert noch"-Signal |
 | Angelegte Plätze | Name, Lage-Hinweis, Koordinaten, Eigenschaften, Zeitstempel | Verzeichnis der Wickelplätze |
 | Inhaltsmeldungen | Platz-Referenz, Art (z. B. Spam), Zeitstempel | Moderation |
-| Auth-Kennung | UUID, ggf. E-Mail (nur Admin), Zeitstempel | Zuordnung deiner Beiträge, Missbrauchsschutz |
+| Auth-Kennung | UUID, ggf. E-Mail (bei Konto/Admin), Zeitstempel | Zuordnung deiner Beiträge, Missbrauchsschutz |
+| Kontodaten (optional) | E-Mail-Adresse, verschlüsseltes Passwort | Kontoverwaltung, Login, Passwort-Reset |
 
 **Rechtsgrundlage:** Erfüllung der App-Funktion sowie unser berechtigtes
 Interesse an einem funktionierenden, missbrauchsgeschützten Community-Verzeichnis

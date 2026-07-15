@@ -18,6 +18,7 @@ import '../../community/presentation/all_places_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/my_places_screen.dart';
 import '../../admin/data/auth_repository.dart';
+import '../../account/presentation/account_login_screen.dart';
 import '../../search/presentation/address_search_bar.dart';
 import '../../updater/presentation/update_sheet.dart';
 import '../domain/changing_place.dart';
@@ -116,6 +117,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
+    final isLoggedIn = ref.watch(isLoggedInProvider);
 
     return Scaffold(
       body: Stack(
@@ -176,7 +178,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                   Expanded(
                     child: AddressSearchBar(
                       onSelected: _goTo,
-                      trailing: _buildMenu(hasBackend, isAdmin),
+                      trailing: _buildMenu(hasBackend, isAdmin, isLoggedIn),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -250,7 +252,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
   }
 
-  Widget _buildMenu(bool hasBackend, bool isAdmin) {
+  Widget _buildMenu(bool hasBackend, bool isAdmin, bool isLoggedIn) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert),
       onSelected: (v) async {
@@ -275,7 +277,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         }
       },
       itemBuilder: (_) => [
-        if (hasBackend)
+        if (hasBackend && isLoggedIn)
           const PopupMenuItem(
             value: 'my_pins',
             child: Row(
@@ -541,11 +543,59 @@ class _MapScreenState extends ConsumerState<MapScreen>
   }
 
   Future<void> _addPlace() async {
+    // Pin-Erstellen erfordert ein Konto (Bewerten bleibt anonym moeglich).
+    if (!ref.read(isLoggedInProvider)) {
+      await _promptLogin();
+      return;
+    }
     final center = _mapController.camera.center;
     final added = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => AddPlaceScreen(initialCenter: center)),
     );
     if (added ?? false) await refreshCommunityDataFromWidget(ref);
+  }
+
+  /// Hinweis + CTA zum Anmelden/Registrieren, wenn eine konto-pflichtige
+  /// Aktion ohne Konto versucht wird.
+  Future<void> _promptLogin() async {
+    final go = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          8,
+          20,
+          20 + MediaQuery.viewPaddingOf(ctx).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Konto benötigt', style: Theme.of(ctx).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const Text(
+              'Zum Melden und Verwalten von Wickelplätzen brauchst du ein '
+              'kostenloses Konto. Bewerten geht auch ohne.',
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.login),
+                label: const Text('Anmelden / Registrieren'),
+                onPressed: () => Navigator.pop(ctx, true),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (go == true && mounted) {
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const AccountLoginScreen()));
+    }
   }
 }
 
