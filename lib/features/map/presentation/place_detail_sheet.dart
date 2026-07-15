@@ -243,9 +243,11 @@ class PlaceDetailSheet extends ConsumerWidget {
       if (context.mounted) showBottomToast(context, e.userMessage);
     } catch (_) {
       if (context.mounted) {
-        showBottomToast(context, 'Bewertung fehlgeschlagen. Bitte später erneut.');
+        showBottomToast(
+          context,
+          'Bewertung fehlgeschlagen. Bitte später erneut.',
+        );
       }
-    }
     }
   }
 }
