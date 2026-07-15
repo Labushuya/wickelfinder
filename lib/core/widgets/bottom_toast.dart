@@ -29,10 +29,10 @@ void showBottomToast(BuildContext context, String message) {
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: isLight ? AppColors.primary : AppColors.darkPrimary,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black26,
@@ -47,6 +47,7 @@ void showBottomToast(BuildContext context, String message) {
               style: TextStyle(
                 color: isLight ? Colors.white : AppColors.ink,
                 fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ),

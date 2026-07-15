@@ -224,6 +224,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          // Rechtsbuendig: Faehrt ein FAB sein Label aus (wird breiter),
+          // bleibt der andere FAB rechts verankert und wird NICHT mittig
+          // verschoben/gestreckt.
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             HoldToLabelFab(
               heroTag: 'loc',
