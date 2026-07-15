@@ -18,6 +18,7 @@ class AuthRepository {
   );
   static const _kEmail = 'admin_email';
   static const _kPassword = 'admin_password';
+  static const _kAutoLogin = 'admin_auto_login';
 
   User? get currentUser => _client.auth.currentUser;
   bool get isSignedInNonAnon =>
@@ -39,6 +40,7 @@ class AuthRepository {
       if (remember) {
         await _storage.write(key: _kEmail, value: email);
         await _storage.write(key: _kPassword, value: password);
+        await _storage.write(key: _kAutoLogin, value: 'true');
       } else {
         await clearSavedCredentials();
       }
@@ -48,6 +50,8 @@ class AuthRepository {
     }
   }
 
+  /// Gespeicherte Zugangsdaten (fuer Vorbefuellung des Login-Felds).
+  /// Bleiben auch nach einem Logout erhalten.
   Future<({String email, String password})?> savedCredentials() async {
     try {
       final email = await _storage.read(key: _kEmail);
@@ -63,28 +67,41 @@ class AuthRepository {
     try {
       await _storage.delete(key: _kEmail);
       await _storage.delete(key: _kPassword);
+      await _storage.delete(key: _kAutoLogin);
     } catch (_) {
       // Ignorieren (siehe signInAdminRemember).
     }
   }
 
-  /// Beim Start: wenn keine gueltige (Nicht-Anon-)Session, aber gespeicherte
-  /// Zugangsdaten vorhanden sind -> stillschweigend neu anmelden.
+  /// Beim Start: nur automatisch anmelden, wenn Auto-Login aktiv ist (der
+  /// Nutzer hat sich nicht zwischenzeitlich abgemeldet) und gespeicherte
+  /// Zugangsdaten existieren.
   Future<void> tryAutoLogin() async {
     if (isSignedInNonAnon) return;
+    try {
+      if (await _storage.read(key: _kAutoLogin) != 'true') return;
+    } catch (_) {
+      return;
+    }
     final creds = await savedCredentials();
     if (creds == null) return;
     try {
       await signInAdmin(creds.email, creds.password);
     } catch (_) {
-      // Ungueltig/geaendert -> gespeicherte Daten verwerfen.
-      await clearSavedCredentials();
+      // Ungueltig/geaendert -> Auto-Login abschalten, Felder bleiben aber.
+      try {
+        await _storage.delete(key: _kAutoLogin);
+      } catch (_) {}
     }
   }
 
-  /// Abmelden + gespeicherte Zugangsdaten loeschen.
+  /// Abmelden — beendet die Session und schaltet Auto-Login ab, LAESST aber
+  /// E-Mail+Passwort gespeichert, damit die Login-Felder beim naechsten Mal
+  /// vorbefuellt sind (schnelles erneutes Anmelden).
   Future<void> signOut() async {
-    await clearSavedCredentials();
+    try {
+      await _storage.delete(key: _kAutoLogin);
+    } catch (_) {}
     await _client.auth.signOut();
   }
 

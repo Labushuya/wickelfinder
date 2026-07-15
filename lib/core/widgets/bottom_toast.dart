@@ -10,18 +10,21 @@ import '../theme/app_theme.dart';
 /// -> schiebt den FAB hoch). Fuer "Banner unter den FABs, FABs unbewegt" wird
 /// daher ein eigenes OverlayEntry verwendet.
 void showBottomToast(BuildContext context, String message) {
-  final overlay = Overlay.of(context);
+  // rootOverlay: true -> App-weites Overlay UEBER allem (auch ueber einem
+  // modalen BottomSheet), sonst laege der Toast hinter dem Sheet und waere
+  // unsichtbar. Das war die Ursache, warum der Toast nicht unten erschien.
+  final overlay = Overlay.of(context, rootOverlay: true);
   final theme = Theme.of(context);
   final isLight = theme.brightness == Brightness.light;
-  final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder: (ctx) => Positioned(
       left: 12,
       right: 12,
-      // Ganz unten, knapp ueber der System-Navigationsleiste.
-      bottom: bottomInset + 12,
+      // Ganz unten, knapp ueber der System-Navigationsleiste (Insets aus dem
+      // Overlay-Kontext, nicht aus dem evtl. Sheet-reduzierten Aufrufer-ctx).
+      bottom: MediaQuery.viewPaddingOf(ctx).bottom + 12,
       child: IgnorePointer(
         child: Material(
           color: Colors.transparent,

@@ -127,12 +127,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
               initialZoom: _zoom,
               minZoom: 3,
               maxZoom: 19,
-              // Karte bleibt Nord-oben: Rotations-Geste deaktiviert, damit Pins
-              // (wie bei Google Maps) immer aufrecht ausgerichtet bleiben und
-              // nicht mit der Karte mitdrehen.
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-              ),
               onMapReady: _onMapReady,
               onPositionChanged: (pos, _) {
                 final z = pos.zoom ?? _zoom;
@@ -162,7 +156,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
                       )
                     : null,
               ),
-              MarkerLayer(markers: _buildMarkers(accumulated.all)),
+              // rotate: true -> Marker drehen GEGEN die Karte und bleiben
+              // aufrecht (wie Google Maps), waehrend die Karte rotierbar ist.
+              MarkerLayer(
+                rotate: true,
+                markers: _buildMarkers(accumulated.all),
+              ),
             ],
           ),
 
@@ -250,17 +249,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Widget _buildMenu(bool hasBackend, bool isAdmin) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert),
-      onSelected: (v) {
+      onSelected: (v) async {
         if (v == 'update') {
           UpdateSheet.checkAndShow(context, ref, manual: true);
         } else if (v == 'my_pins') {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const MyPlacesScreen()));
+          final sel = await Navigator.of(context).push<ChangingPlace>(
+            MaterialPageRoute(builder: (_) => const MyPlacesScreen()),
+          );
+          if (sel != null) _goTo(sel.location);
         } else if (v == 'all_pins') {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const AllPlacesScreen()));
+          final sel = await Navigator.of(context).push<ChangingPlace>(
+            MaterialPageRoute(builder: (_) => const AllPlacesScreen()),
+          );
+          if (sel != null) _goTo(sel.location);
         } else if (v == 'settings') {
           Navigator.of(
             context,
