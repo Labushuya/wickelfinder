@@ -155,7 +155,15 @@ grant execute on function update_community_place(uuid, float8, float8, text, tex
   to authenticated;
 
 -- --- Views + Delta + Admin-Liste: fee_mode mit ausgeben ----------------------
-create or replace view community_places_public
+-- WICHTIG: fee_mode wird MITTIG (zwischen fee und lat) eingefuegt -> Postgres
+-- erlaubt hier KEIN 'create or replace view' (Fehler 42P16, Spalten-Umordnung).
+-- Daher: abhaengige Delta-Funktion + Views droppen, dann in korrekter
+-- Reihenfolge neu anlegen (Views VOR der Delta-Funktion, die sie joint).
+drop function if exists community_places_delta(timestamptz);
+drop view if exists community_places_public;
+drop view if exists my_community_places;
+
+create view community_places_public
 with (security_invoker = off) as
 select
   cp.id, cp.name, cp.location_hint, cp.wheelchair, cp.fee, cp.fee_mode,
@@ -166,7 +174,7 @@ from community_places cp
 where cp.moderation_state = 'visible' and cp.hidden = false;
 grant select on community_places_public to anon, authenticated;
 
-create or replace view my_community_places
+create view my_community_places
 with (security_invoker = on) as
 select
   cp.id, cp.name, cp.location_hint, cp.wheelchair, cp.fee, cp.fee_mode,
@@ -176,8 +184,7 @@ select
 from community_places cp;
 grant select on my_community_places to authenticated;
 
--- community_places_delta: + fee_mode (Return-Typ aendert sich -> droppen).
-drop function if exists community_places_delta(timestamptz);
+-- community_places_delta: NEU (nach den Views — joint community_places_public).
 create function community_places_delta(p_since timestamptz default null)
 returns table (
   id uuid, name text, location_hint text, wheelchair boolean, fee boolean,
