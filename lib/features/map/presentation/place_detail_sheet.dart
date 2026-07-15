@@ -34,14 +34,15 @@ class PlaceDetailSheet extends ConsumerWidget {
 
     // Bearbeiten/Loeschen anbieten, wenn eigener Community-Pin ODER Admin.
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
-    final canManage =
+    final isOwner =
         place.source == PlaceSource.community &&
-        (isAdmin ||
-            (ref
-                    .watch(myPlacesProvider)
-                    .valueOrNull
-                    ?.any((p) => p.id == place.id) ??
-                false));
+        (ref
+                .watch(myPlacesProvider)
+                .valueOrNull
+                ?.any((p) => p.id == place.id) ??
+            false);
+    final canManage =
+        place.source == PlaceSource.community && (isAdmin || isOwner);
 
     final media = MediaQuery.of(context);
     // Hoehe deckeln (max 85% Screen) und Inhalt scrollen lassen, damit bei
@@ -74,6 +75,12 @@ class PlaceDetailSheet extends ConsumerWidget {
                   ],
                   const SizedBox(height: 12),
                   _AccessibilityBanner(place: place, stats: stats),
+                  if (isOwner)
+                    _AuthorHint(
+                      place: place,
+                      stats: stats,
+                      onEdit: () => _edit(context),
+                    ),
                   _CommunityConsensus(stats: stats),
                   const SizedBox(height: 4),
                   if (place.locationHint != null)
@@ -375,37 +382,40 @@ class _AccessibilityBanner extends StatelessWidget {
     final ctx = place.venueContext;
     final parts = <String>['${ctx.emoji} ${ctx.label}'];
 
-    // Kosten-Aussage (Stammdaten des Ortes), ggf. mit Kontext-Hinweis.
-    // Bewusst als "laut Angaben" formuliert -> klar von der subjektiven
-    // Community-Bewertung (Chips unten) abgegrenzt, kein Widerspruch.
-    if (place.fee == true) {
-      parts.add(
-        ctx.accessRestricted
-            ? '💶 laut Angaben kostenpflichtig (Eintritt)'
-            : '💶 laut Angaben kostenpflichtig',
-      );
-    } else if (place.fee == false) {
-      parts.add('✅ laut Angaben kostenlos');
-    } else if (ctx.accessRestricted) {
-      // fee unbekannt, aber Ort setzt typischerweise Eintritt/Konsum voraus.
-      parts.add('ℹ️ evtl. Eintritt/Konsum');
+    // Kosten-Aussage aus dem dreiwertigen Modell (free/conditional/paid).
+    // "Angabe des Eintragenden" macht die Quelle eindeutig (vs. Community).
+    final mode = place.effectiveFeeMode;
+    switch (mode) {
+      case FeeMode.paid:
+        parts.add(
+          ctx.accessRestricted
+              ? '💶 kostenpflichtig (Eintritt)'
+              : '💶 kostenpflichtig',
+        );
+      case FeeMode.free:
+        parts.add('✅ kostenlos');
+      case FeeMode.conditional:
+        parts.add('🎫 kostenlos für Gäste/Kunden');
+      case null:
+        if (ctx.accessRestricted) parts.add('ℹ️ evtl. Eintritt/Konsum');
     }
 
-    final restricted = ctx.accessRestricted || place.fee == true;
+    final restricted =
+        ctx.accessRestricted ||
+        mode == FeeMode.paid ||
+        mode == FeeMode.conditional;
     final bg = restricted
         ? theme.colorScheme.tertiaryContainer
         : theme.colorScheme.secondaryContainer;
     final fg = restricted
         ? theme.colorScheme.onTertiaryContainer
         : theme.colorScheme.onSecondaryContainer;
-    // Brand-Akzent als markanter Rahmen/Icon — hebt das Banner klar vom
-    // Hintergrund ab, ohne die (WCAG-gepruefte) Textfarbe fg zu aendern.
     final accent = restricted ? AppColors.accent : AppColors.primary;
 
     // Community-Konsens zu den Kosten gegen die Stammdaten pruefen.
     final free = stats.tagCounts[PlaceTag.freeOfCharge] ?? 0;
     final paid = stats.tagCounts[PlaceTag.paid] ?? 0;
-    final costNote = _costConsensusNote(place.fee, free, paid);
+    final verdict = costConsensus(mode, free, paid);
 
     return Container(
       width: double.infinity,
@@ -428,25 +438,29 @@ class _AccessibilityBanner extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  parts.join('  ·  '),
+                  'Angabe des Eintragenden: ${parts.join('  ·  ')}',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: fg,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
+              if (verdict.badge != null) ...[
+                const SizedBox(width: 6),
+                _TrustBadge(verdict.badge!),
+              ],
             ],
           ),
-          if (costNote != null)
+          if (verdict.note != null)
             Padding(
               padding: const EdgeInsets.only(top: 6, left: 28),
               child: Row(
                 children: [
-                  Icon(costNote.icon, size: 16, color: fg),
+                  Icon(verdict.icon, size: 16, color: fg),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      costNote.text,
+                      verdict.note!,
                       style: theme.textTheme.bodySmall?.copyWith(color: fg),
                     ),
                   ),
@@ -458,38 +472,138 @@ class _AccessibilityBanner extends StatelessWidget {
     );
   }
 
-  /// Vergleicht die Kosten-Stammdaten (place.fee) mit dem Community-Konsens.
-  /// - Widerspruch (Mehrheit taggt Gegenteil) -> Warnhinweis ("Community
-  ///   gewinnt sichtbar").
-  /// - Bestaetigung -> dezente "von N bestaetigt"-Zeile.
-  /// - Kein/unklares Feedback -> null (keine Zusatzzeile).
-  static _CostNote? _costConsensusNote(bool? fee, int free, int paid) {
-    if (free == 0 && paid == 0) return null;
-    if (fee == true && free > paid) {
-      return _CostNote('⚠ $free× als kostenlos gemeldet', Icons.warning_amber);
-    }
-    if (fee == false && paid > free) {
-      return _CostNote(
-        '⚠ $paid× als kostenpflichtig gemeldet',
-        Icons.warning_amber,
+  /// Vergleicht die Kosten-Angabe (effectiveFeeMode) mit dem Community-Konsens.
+  /// Regel: Stammdaten fuehren; Community relativiert sichtbar (Ampel + Hinweis),
+  /// ueberschreibt aber nicht. "bedingt" hat keinen direkten free/paid-Gegenpol
+  /// -> nur neutrale Info.
+  static CostConsensus costConsensus(FeeMode? mode, int free, int paid) {
+    if (free == 0 && paid == 0) return const CostConsensus();
+    if (mode == FeeMode.paid && free > paid) {
+      return CostConsensus(
+        badge: _Trust.disputed,
+        note: '⚠ $free× als kostenlos gemeldet',
+        icon: Icons.warning_amber,
       );
     }
-    // Bestaetigung durch die Mehrheit.
-    if (fee == true && paid > free) {
-      return _CostNote('von $paid bestätigt', Icons.check);
+    if (mode == FeeMode.free && paid > free) {
+      return CostConsensus(
+        badge: _Trust.disputed,
+        note: '⚠ $paid× als kostenpflichtig gemeldet',
+        icon: Icons.warning_amber,
+      );
     }
-    if (fee == false && free > paid) {
-      return _CostNote('von $free bestätigt', Icons.check);
+    if (mode == FeeMode.paid && paid > free) {
+      return CostConsensus(
+        badge: _Trust.confirmed,
+        note: 'von $paid bestätigt',
+        icon: Icons.check,
+      );
     }
-    return null;
+    if (mode == FeeMode.free && free > paid) {
+      return CostConsensus(
+        badge: _Trust.confirmed,
+        note: 'von $free bestätigt',
+        icon: Icons.check,
+      );
+    }
+    return const CostConsensus();
   }
 }
 
-/// Kleiner Wert-Traeger fuer die Kosten-Konsens-Zeile.
-class _CostNote {
-  const _CostNote(this.text, this.icon);
-  final String text;
+enum _Trust { confirmed, disputed }
+
+/// Ergebnis des Kosten-Konsens-Abgleichs: optionale Ampel + Hinweiszeile.
+class CostConsensus {
+  const CostConsensus({this.badge, this.note, this.icon = Icons.info_outline});
+  final _Trust? badge;
+  final String? note;
   final IconData icon;
+
+  /// True, wenn die Community der Angabe klar widerspricht (fuer Autor-Hinweis).
+  bool get isDisputed => badge == _Trust.disputed;
+}
+
+/// Kleines Ampel-Badge: gruen "bestätigt" / gelb "umstritten".
+class _TrustBadge extends StatelessWidget {
+  const _TrustBadge(this.trust);
+  final _Trust trust;
+
+  @override
+  Widget build(BuildContext context) {
+    final confirmed = trust == _Trust.confirmed;
+    final color = confirmed ? Colors.green.shade600 : Colors.amber.shade700;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        confirmed ? 'bestätigt' : 'umstritten',
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+/// Autor-Hinweis: nur der Ersteller des Pins sieht bei starkem Community-
+/// Widerspruch zur Kosten-Angabe einen dezenten "Angabe pruefen?"-Hinweis.
+class _AuthorHint extends StatelessWidget {
+  const _AuthorHint({
+    required this.place,
+    required this.stats,
+    required this.onEdit,
+  });
+  final ChangingPlace place;
+  final PlaceStats stats;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final free = stats.tagCounts[PlaceTag.freeOfCharge] ?? 0;
+    final paid = stats.tagCounts[PlaceTag.paid] ?? 0;
+    final verdict = _AccessibilityBanner.costConsensus(
+      place.effectiveFeeMode,
+      free,
+      paid,
+    );
+    if (!verdict.isDisputed) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final other = (free > paid) ? 'kostenlos' : 'kostenpflichtig';
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade700.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.amber.shade700),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.campaign_outlined,
+              size: 18,
+              color: Colors.amber.shade800,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Community meldet oft „$other". Deine Angabe prüfen?',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            TextButton(onPressed: onEdit, child: const Text('Bearbeiten')),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Kompakte Konsens-Zeile: zeigt die haeufigsten Community-Tags mit Zaehler

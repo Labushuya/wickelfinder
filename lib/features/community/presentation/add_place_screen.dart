@@ -39,7 +39,7 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
     text: widget.editPlace?.locationHint ?? '',
   );
   late bool? _wheelchair = widget.editPlace?.wheelchairAccessible;
-  late bool? _fee = widget.editPlace?.fee;
+  late FeeMode? _feeMode = widget.editPlace?.effectiveFeeMode;
   bool _saving = false;
 
   late LatLng _center = widget.editPlace?.location ?? widget.initialCenter;
@@ -121,11 +121,12 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
                   value: _wheelchair,
                   onChanged: (v) => setState(() => _wheelchair = v),
                 ),
-                _TriStateRow(
-                  label: 'Kostenlos',
-                  value: _fee == null ? null : !_fee!,
-                  onChanged: (v) =>
-                      setState(() => _fee = v == null ? null : !v),
+                const SizedBox(height: 8),
+                const Text('Kosten'),
+                const SizedBox(height: 6),
+                _FeeModeSelector(
+                  value: _feeMode,
+                  onChanged: (v) => setState(() => _feeMode = v),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -175,7 +176,7 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
           name: emptyToNull(_nameController.text),
           locationHint: emptyToNull(_hintController.text),
           wheelchair: _wheelchair,
-          fee: _fee,
+          feeMode: _feeMode,
         );
         // Refresh HIER ausloesen, wo der ConsumerState-ref garantiert lebt.
         // (Frueher lief der Refresh ueber den bereits gepoppten Sheet-Ref und
@@ -191,7 +192,7 @@ class _AddPlaceScreenState extends ConsumerState<AddPlaceScreen> {
           name: emptyToNull(_nameController.text),
           locationHint: emptyToNull(_hintController.text),
           wheelchair: _wheelchair,
-          fee: _fee,
+          feeMode: _feeMode,
         );
         await refreshCommunityDataFromWidget(ref);
         messenger.showSnackBar(
@@ -252,6 +253,34 @@ class _TriStateRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Dreiwertige Kosten-Auswahl (+ unbekannt): Frei / Bedingt / Kostenpflichtig.
+/// "Bedingt" = kostenlos nur fuer Gaeste/Kunden (Restaurant/Hotel etc.).
+class _FeeModeSelector extends StatelessWidget {
+  const _FeeModeSelector({required this.value, required this.onChanged});
+  final FeeMode? value;
+  final ValueChanged<FeeMode?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<String>(
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(value: 'free', label: Text('Frei')),
+        ButtonSegment(value: 'conditional', label: Text('Bedingt')),
+        ButtonSegment(value: 'paid', label: Text('Zahlung')),
+        ButtonSegment(value: 'unknown', label: Text('?')),
+      ],
+      selected: {value?.wire ?? 'unknown'},
+      onSelectionChanged: (sel) => onChanged(switch (sel.first) {
+        'free' => FeeMode.free,
+        'conditional' => FeeMode.conditional,
+        'paid' => FeeMode.paid,
+        _ => null,
+      }),
     );
   }
 }

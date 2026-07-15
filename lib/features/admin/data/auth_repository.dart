@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/supabase/supabase_init.dart';
@@ -10,6 +11,14 @@ class AuthRepository {
   AuthRepository(this._client);
   final SupabaseClient _client;
 
+  // Verschluesselter Speicher (Android Keystore / iOS Keychain) fuer die
+  // Admin-Zugangsdaten (nur wenn der Nutzer "Angemeldet bleiben" waehlt).
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  static const _kEmail = 'admin_email';
+  static const _kPassword = 'admin_password';
+
   User? get currentUser => _client.auth.currentUser;
   bool get isSignedInNonAnon =>
       currentUser != null && (currentUser!.isAnonymous == false);
@@ -19,7 +28,52 @@ class AuthRepository {
   Future<void> signInAdmin(String email, String password) =>
       _client.auth.signInWithPassword(email: email, password: password);
 
-  Future<void> signOut() => _client.auth.signOut();
+  /// Login + optional Zugangsdaten verschluesselt speichern (Auto-Login).
+  Future<void> signInAdminRemember(
+    String email,
+    String password, {
+    required bool remember,
+  }) async {
+    await signInAdmin(email, password);
+    if (remember) {
+      await _storage.write(key: _kEmail, value: email);
+      await _storage.write(key: _kPassword, value: password);
+    } else {
+      await clearSavedCredentials();
+    }
+  }
+
+  Future<({String email, String password})?> savedCredentials() async {
+    final email = await _storage.read(key: _kEmail);
+    final password = await _storage.read(key: _kPassword);
+    if (email == null || password == null) return null;
+    return (email: email, password: password);
+  }
+
+  Future<void> clearSavedCredentials() async {
+    await _storage.delete(key: _kEmail);
+    await _storage.delete(key: _kPassword);
+  }
+
+  /// Beim Start: wenn keine gueltige (Nicht-Anon-)Session, aber gespeicherte
+  /// Zugangsdaten vorhanden sind -> stillschweigend neu anmelden.
+  Future<void> tryAutoLogin() async {
+    if (isSignedInNonAnon) return;
+    final creds = await savedCredentials();
+    if (creds == null) return;
+    try {
+      await signInAdmin(creds.email, creds.password);
+    } catch (_) {
+      // Ungueltig/geaendert -> gespeicherte Daten verwerfen.
+      await clearSavedCredentials();
+    }
+  }
+
+  /// Abmelden + gespeicherte Zugangsdaten loeschen.
+  Future<void> signOut() async {
+    await clearSavedCredentials();
+    await _client.auth.signOut();
+  }
 
   /// Serverseitige Admin-Pruefung. Anonyme/keine Session -> sofort false.
   Future<bool> checkIsAdmin() async {

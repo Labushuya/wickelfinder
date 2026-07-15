@@ -119,7 +119,7 @@ class CommunityRepository {
   Future<List<ChangingPlace>> communityPlaces() async {
     final rows = await _client
         .from('community_places_public')
-        .select('id, name, location_hint, wheelchair, fee, lat, lon');
+        .select('id, name, location_hint, wheelchair, fee, fee_mode, lat, lon');
     return [
       for (final row in rows)
         ChangingPlace(
@@ -131,6 +131,7 @@ class CommunityRepository {
           name: row['name'] as String?,
           wheelchairAccessible: row['wheelchair'] as bool?,
           fee: row['fee'] as bool?,
+          feeMode: FeeMode.fromWire(row['fee_mode'] as String?),
           locationHint: row['location_hint'] as String?,
           source: PlaceSource.community,
         ),
@@ -146,6 +147,7 @@ class CommunityRepository {
     String? locationHint,
     bool? wheelchair,
     bool? fee,
+    FeeMode? feeMode,
   }) async {
     await _session.ensureSignedIn();
     try {
@@ -158,6 +160,7 @@ class CommunityRepository {
           'p_hint': locationHint,
           'p_wheelchair': wheelchair,
           'p_fee': fee,
+          'p_fee_mode': feeMode?.wire,
         },
       );
       return ref;
@@ -172,7 +175,7 @@ class CommunityRepository {
     if (_session.currentUserId == null) return const [];
     final rows = await _client
         .from('my_community_places')
-        .select('id, name, location_hint, wheelchair, fee, lat, lon')
+        .select('id, name, location_hint, wheelchair, fee, fee_mode, lat, lon')
         .order('created_at', ascending: false);
     return [
       for (final row in rows)
@@ -185,10 +188,48 @@ class CommunityRepository {
           name: row['name'] as String?,
           wheelchairAccessible: row['wheelchair'] as bool?,
           fee: row['fee'] as bool?,
+          feeMode: FeeMode.fromWire(row['fee_mode'] as String?),
           locationHint: row['location_hint'] as String?,
           source: PlaceSource.community,
         ),
     ];
+  }
+
+  /// Laedt ALLE Community-Plaetze (nur Admin; via admin_list_places mit
+  /// Welt-BBox). Enthaelt auch versteckte/fremde Pins. Ohne Adminrecht wirft
+  /// der Server 'admin_required' -> hier als leere Liste behandelt.
+  Future<List<ChangingPlace>> adminAllPlaces() async {
+    if (_session.currentUserId == null) return const [];
+    try {
+      final rows = await _client.rpc<List<dynamic>>(
+        'admin_list_places',
+        params: {
+          'p_south': -90.0,
+          'p_west': -180.0,
+          'p_north': 90.0,
+          'p_east': 180.0,
+        },
+      );
+      return [
+        for (final raw in rows)
+          if ((raw as Map).cast<String, dynamic>() case final row)
+            ChangingPlace(
+              id: row['id'] as String,
+              location: LatLng(
+                (row['lat'] as num).toDouble(),
+                (row['lon'] as num).toDouble(),
+              ),
+              name: row['name'] as String?,
+              wheelchairAccessible: row['wheelchair'] as bool?,
+              fee: row['fee'] as bool?,
+              feeMode: FeeMode.fromWire(row['fee_mode'] as String?),
+              locationHint: row['location_hint'] as String?,
+              source: PlaceSource.community,
+            ),
+      ];
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// Aktualisiert einen eigenen Platz. Server prueft Eigentuemerschaft.
@@ -200,6 +241,7 @@ class CommunityRepository {
     String? locationHint,
     bool? wheelchair,
     bool? fee,
+    FeeMode? feeMode,
   }) async {
     await _session.ensureSignedIn();
     try {
@@ -213,6 +255,7 @@ class CommunityRepository {
           'p_hint': locationHint,
           'p_wheelchair': wheelchair,
           'p_fee': fee,
+          'p_fee_mode': feeMode?.wire,
         },
       );
     } on PostgrestException catch (e) {

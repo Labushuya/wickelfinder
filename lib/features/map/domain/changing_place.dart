@@ -2,6 +2,33 @@ import 'package:latlong2/latlong.dart';
 
 import 'venue_context.dart';
 
+/// Kosten-Modell eines Platzes: kostenlos, bedingt (kostenlos nur fuer
+/// Gaeste/Kunden) oder kostenpflichtig. null = unbekannt.
+enum FeeMode {
+  free('free', 'Kostenlos'),
+  conditional('conditional', 'Kostenlos für Gäste/Kunden'),
+  paid('paid', 'Kostenpflichtig');
+
+  const FeeMode(this.wire, this.label);
+  final String wire;
+  final String label;
+
+  static FeeMode? fromWire(String? w) {
+    if (w == null) return null;
+    for (final m in values) {
+      if (m.wire == w) return m;
+    }
+    return null;
+  }
+
+  /// Ableitung aus dem alten boolean-fee (Abwaertskompatibilitaet / OSM).
+  static FeeMode? fromFee(bool? fee) => switch (fee) {
+    true => FeeMode.paid,
+    false => FeeMode.free,
+    _ => null,
+  };
+}
+
 /// Domänen-Modell für einen Wickelplatz.
 ///
 /// Quelle ist zunächst OpenStreetMap (`changing_table=yes`); die
@@ -14,6 +41,7 @@ class ChangingPlace {
     this.name,
     this.wheelchairAccessible,
     this.fee,
+    this.feeMode,
     this.locationHint,
     this.source = PlaceSource.osm,
     this.venueContext = VenueContext.unknown,
@@ -29,6 +57,13 @@ class ChangingPlace {
 
   /// Kostenpflichtig? Aus `fee=yes|no` – null wenn unbekannt.
   final bool? fee;
+
+  /// Dreiwertiges Kosten-Modell (Community): free/conditional/paid. Fuer
+  /// OSM-Pins aus [fee] abgeleitet. null = unbekannt.
+  final FeeMode? feeMode;
+
+  /// Effektives Kosten-Modell: bevorzugt [feeMode], faellt sonst auf [fee].
+  FeeMode? get effectiveFeeMode => feeMode ?? FeeMode.fromFee(fee);
 
   /// Freitext-Hinweis zur Lage, z. B. aus `changing_table:location`.
   final String? locationHint;
