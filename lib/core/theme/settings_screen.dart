@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/admin/data/auth_repository.dart';
 import '../../features/admin/presentation/admin_login_screen.dart';
+import '../../features/privacy/data/account_repository.dart';
+import '../../features/privacy/presentation/privacy_screen.dart';
 import 'theme_controller.dart';
 
 /// Einstellungen-Screen. Aktuell: Darstellung (hell/dunkel/System).
@@ -52,6 +54,8 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           _AdminSection(),
           const Divider(),
+          _MyDataSection(),
+          const Divider(),
           const _SectionHeader('Über'),
           ListTile(
             leading: const Icon(Icons.info_outline),
@@ -61,6 +65,14 @@ class SettingsScreen extends ConsumerWidget {
               '© OpenStreetMap-Mitwirkende',
               style: theme.textTheme.bodySmall,
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Datenschutz'),
+            subtitle: const Text('Datenschutzerklärung ansehen'),
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PrivacyScreen())),
           ),
         ],
       ),
@@ -124,6 +136,164 @@ class _AdminSection extends ConsumerWidget {
           ),
       ],
     );
+  }
+}
+
+/// DSGVO-Bereich „Meine Daten": Export (Auskunft/Portabilitaet) + vollstaendige
+/// Loeschung (inkl. Auth-Konto). Nur sichtbar, wenn eine Identitaet existiert
+/// (ohne Beitrag fallen keine Daten an).
+class _MyDataSection extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_MyDataSection> createState() => _MyDataSectionState();
+}
+
+class _MyDataSectionState extends ConsumerState<_MyDataSection> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = ref.watch(accountRepositoryProvider);
+    if (repo == null || !repo.hasIdentity) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionHeader('Meine Daten'),
+        ListTile(
+          leading: const Icon(Icons.download_outlined),
+          title: const Text('Meine Daten exportieren'),
+          subtitle: const Text(
+            'Vollständige Kopie als JSON (Auskunft/Mitnahme).',
+          ),
+          enabled: !_busy,
+          onTap: _busy ? null : () => _export(repo),
+        ),
+        ListTile(
+          leading: Icon(
+            Icons.delete_forever_outlined,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          title: Text(
+            'Meine Daten & Konto löschen',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+          subtitle: const Text(
+            'Löscht alle deine Daten und dein Konto — unwiderruflich.',
+          ),
+          enabled: !_busy,
+          onTap: _busy ? null : () => _confirmDelete(repo),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _export(AccountRepository repo) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await repo.exportMyDataToFile();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Export erstellt — zum Ansehen/Teilen geöffnet.'),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Export fehlgeschlagen. Bitte später erneut.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _confirmDelete(AccountRepository repo) async {
+    // Erste Bestaetigung: Klartext, was passiert + Export-Empfehlung.
+    final step1 = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Alle Daten & Konto löschen?'),
+        content: const Text(
+          'Es werden unwiderruflich gelöscht:\n'
+          '• deine Bewertungen, Meldungen und Bestätigungen\n'
+          '• alle von dir angelegten Plätze (inkl. der Bewertungen anderer dazu)\n'
+          '• dein Konto (anonyme Kennung)\n\n'
+          'Tipp: Exportiere deine Daten vorher.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Weiter'),
+          ),
+        ],
+      ),
+    );
+    if (step1 != true || !mounted) return;
+
+    // Zweite Bestaetigung: Wort "LÖSCHEN" tippen.
+    final controller = TextEditingController();
+    final step2 = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Endgültig bestätigen'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tippe zur Bestätigung das Wort LÖSCHEN ein:'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(hintText: 'LÖSCHEN'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(
+              context,
+              controller.text.trim().toUpperCase() == 'LÖSCHEN',
+            ),
+            child: const Text('Endgültig löschen'),
+          ),
+        ],
+      ),
+    );
+    if (step2 != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    setState(() => _busy = true);
+    try {
+      await repo.deleteMyAccount();
+      ref.invalidate(isAdminProvider);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Alle Daten und dein Konto wurden gelöscht.'),
+        ),
+      );
+      navigator.pop(); // zurück zur Karte
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Löschung fehlgeschlagen. Bitte später erneut.'),
+        ),
+      );
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 

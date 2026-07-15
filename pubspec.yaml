@@ -3,7 +3,7 @@ description: "Wickelfinder – finde schnell Wickelplätze in deiner Nähe. Comm
 publish_to: "none"
 
 # SemVer: MAJOR.MINOR.PATCH+BUILD
-version: 0.10.1+28
+version: 0.11.0+29
 
 environment:
   # supabase_flutter 2.16 verlangt Dart >=3.9 / Flutter >=3.35 (= CI-Pin 3.35.5).
@@ -51,5 +51,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Noch keine App-Assets nötig; Deklaration ergänzen, sobald Dateien
-  # unter assets/ liegen (sonst warnt der Analyzer über leeres Verzeichnis).
+  # Datenschutzerklaerung als Asset gebuendelt -> im PrivacyScreen anzeigbar.
+  assets:
+    - PRIVACY.md
