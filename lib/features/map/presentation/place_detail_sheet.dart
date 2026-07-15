@@ -154,12 +154,11 @@ class PlaceDetailSheet extends ConsumerWidget {
   }
 
   Future<void> _edit(BuildContext context) async {
-    final navigator = Navigator.of(context);
-    navigator.pop(); // Detail-Sheet schliessen
-    // AddPlaceScreen loest den Community-Refresh selbst aus (lebender ref),
-    // daher hier KEIN refreshCommunityDataFromWidget mehr (lief frueher auf
-    // dem bereits gepoppten Sheet-Ref und wurde nie ausgefuehrt).
-    await navigator.push<bool>(
+    // Detail-Sheet NICHT schliessen: AddPlaceScreen wird darueber gepusht.
+    // Nach dem Speichern (pop) liegt das Sheet wieder oben und liest den Pin
+    // LIVE aus accumulatedPlacesProvider (vom Refresh in _save aktualisiert)
+    // -> man landet auf der Pin-Detailansicht, nicht auf der Karte.
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) =>
             AddPlaceScreen(initialCenter: place.location, editPlace: place),

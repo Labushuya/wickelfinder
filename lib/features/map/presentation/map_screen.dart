@@ -112,11 +112,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ),
             children: [
               TileLayer(
-                // Hell: OSM-Standardkacheln. Dunkel: CartoDB dark_all
-                // (kostenlos, ODbL/CARTO-konform bei genannter Attribution).
+                // Hell: OSM-Standardkacheln. Dunkel: CartoDB Voyager
+                // (farbig getoent -> Parks gruen, Wasser blau, Gebaeude
+                // abgesetzt; mehr Details als das flaechige dark_all).
+                // Kostenlos, ODbL/CARTO-konform bei genannter Attribution.
                 // {r}=@2x + retinaMode -> scharfe, lesbare Labels auf HiDPI.
                 urlTemplate: isDark
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
                     : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 subdomains: isDark ? const ['a', 'b', 'c', 'd'] : const [],
                 retinaMode: isDark && RetinaMode.isHighDensity(context),
