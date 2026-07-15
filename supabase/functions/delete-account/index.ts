@@ -56,7 +56,17 @@ Deno.serve(async (req) => {
   }
   const userId = userData.user.id;
 
-  // 2) delete_my_data() ALS DIESER NUTZER (JWT durchreichen -> auth.uid() passt).
+  // Defense-in-depth: Admin-Konten sind von der Loeschung ausgenommen.
+  // (Die DB-Funktion delete_my_data wirft ohnehin 'admin_cannot_selfdelete',
+  //  aber wir brechen hier frueh + eindeutig ab.)
+  const { data: isAdmin } = await admin.rpc('is_admin', { uid: userId });
+  if (isAdmin === true) {
+    return new Response(JSON.stringify({ error: 'admin_cannot_selfdelete' }), {
+      status: 403, headers: { ...CORS, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // delete_my_data() ALS DIESER NUTZER (JWT durchreichen -> auth.uid() passt).
   const asUser = createClient(url, serviceKey, {
     global: { headers: { Authorization: `Bearer ${jwt}` } },
     auth: { autoRefreshToken: false, persistSession: false },
