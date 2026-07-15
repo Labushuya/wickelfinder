@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../community/domain/place_stats.dart';
+import '../../community/domain/place_tag.dart';
 import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
@@ -72,7 +73,8 @@ class PlaceDetailSheet extends ConsumerWidget {
                     _MyRatingRow(rating: myRating),
                   ],
                   const SizedBox(height: 12),
-                  _AccessibilityBanner(place: place),
+                  _AccessibilityBanner(place: place, stats: stats),
+                  _CommunityConsensus(stats: stats),
                   const SizedBox(height: 4),
                   if (place.locationHint != null)
                     _InfoRow(
@@ -362,10 +364,11 @@ class _InfoRow extends StatelessWidget {
 }
 
 /// Kombinierte Zugaenglichkeits-Einschaetzung: Kontext (Schwimmbad/Restaurant/…)
-/// + Kosten. Beantwortet "komme ich hier ohne Weiteres rein?".
+/// + Kosten (Stammdaten) + Community-Konsens-Abgleich bei den Kosten.
 class _AccessibilityBanner extends StatelessWidget {
-  const _AccessibilityBanner({required this.place});
+  const _AccessibilityBanner({required this.place, required this.stats});
   final ChangingPlace place;
+  final PlaceStats stats;
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +403,11 @@ class _AccessibilityBanner extends StatelessWidget {
     // Hintergrund ab, ohne die (WCAG-gepruefte) Textfarbe fg zu aendern.
     final accent = restricted ? AppColors.accent : AppColors.primary;
 
+    // Community-Konsens zu den Kosten gegen die Stammdaten pruefen.
+    final free = stats.tagCounts[PlaceTag.freeOfCharge] ?? 0;
+    final paid = stats.tagCounts[PlaceTag.paid] ?? 0;
+    final costNote = _costConsensusNote(place.fee, free, paid);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -408,22 +416,127 @@ class _AccessibilityBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: accent, width: 4)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            restricted ? Icons.info_outline : Icons.check_circle_outline,
-            size: 20,
-            color: accent,
+          Row(
+            children: [
+              Icon(
+                restricted ? Icons.info_outline : Icons.check_circle_outline,
+                size: 20,
+                color: accent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  parts.join('  ·  '),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: fg,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              parts.join('  ·  '),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: fg,
-                fontWeight: FontWeight.w500,
+          if (costNote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 28),
+              child: Row(
+                children: [
+                  Icon(costNote.icon, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      costNote.text,
+                      style: theme.textTheme.bodySmall?.copyWith(color: fg),
+                    ),
+                  ),
+                ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Vergleicht die Kosten-Stammdaten (place.fee) mit dem Community-Konsens.
+  /// - Widerspruch (Mehrheit taggt Gegenteil) -> Warnhinweis ("Community
+  ///   gewinnt sichtbar").
+  /// - Bestaetigung -> dezente "von N bestaetigt"-Zeile.
+  /// - Kein/unklares Feedback -> null (keine Zusatzzeile).
+  static _CostNote? _costConsensusNote(bool? fee, int free, int paid) {
+    if (free == 0 && paid == 0) return null;
+    if (fee == true && free > paid) {
+      return _CostNote('⚠ $free× als kostenlos gemeldet', Icons.warning_amber);
+    }
+    if (fee == false && paid > free) {
+      return _CostNote(
+        '⚠ $paid× als kostenpflichtig gemeldet',
+        Icons.warning_amber,
+      );
+    }
+    // Bestaetigung durch die Mehrheit.
+    if (fee == true && paid > free) {
+      return _CostNote('von $paid bestätigt', Icons.check);
+    }
+    if (fee == false && free > paid) {
+      return _CostNote('von $free bestätigt', Icons.check);
+    }
+    return null;
+  }
+}
+
+/// Kleiner Wert-Traeger fuer die Kosten-Konsens-Zeile.
+class _CostNote {
+  const _CostNote(this.text, this.icon);
+  final String text;
+  final IconData icon;
+}
+
+/// Kompakte Konsens-Zeile: zeigt die haeufigsten Community-Tags mit Zaehler
+/// (max 6), ohne Textwueste. Faktische Transparenz fuer alle Tags, fuer die
+/// es kein Stammdaten-Pendant gibt (Sauberkeit, Windeleimer, Platz, …).
+class _CommunityConsensus extends StatelessWidget {
+  const _CommunityConsensus({required this.stats});
+  final PlaceStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // Kosten-Tags fliessen bereits ins Banner -> hier ausblenden.
+    final entries =
+        stats.tagCounts.entries
+            .where(
+              (e) =>
+                  e.value > 0 &&
+                  e.key != PlaceTag.freeOfCharge &&
+                  e.key != PlaceTag.paid,
+            )
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+    if (entries.isEmpty) return const SizedBox.shrink();
+    final top = entries.take(6);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Von der Community:',
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.outline,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final e in top)
+                Chip(label: Text('${e.key.label} ·  ${e.value}')),
+            ],
           ),
         ],
       ),
