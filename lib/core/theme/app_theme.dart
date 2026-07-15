@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 /// Design-Tokens – Single Source of Truth für die Marke "Wickelfinder".
@@ -105,10 +106,8 @@ abstract final class AppTheme {
         selectedColor: isLight ? AppColors.accentSoft : AppColors.primaryDeep,
         checkmarkColor: isLight ? AppColors.primaryDeep : Colors.white,
         // Kein Checkmark -> Chip-Breite bleibt beim Selektieren konstant,
-        // kein Umbruch-Sprung im Wrap.
+        // kein Umbruch-Sprung im Wrap. Kompaktes Padding + kleineres Label.
         showCheckmark: false,
-        visualDensity: VisualDensity.compact,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         labelPadding: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         secondarySelectedColor: isLight
