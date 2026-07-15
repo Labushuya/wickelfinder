@@ -127,6 +127,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
               initialZoom: _zoom,
               minZoom: 3,
               maxZoom: 19,
+              // Karte bleibt Nord-oben: Rotations-Geste deaktiviert, damit Pins
+              // (wie bei Google Maps) immer aufrecht ausgerichtet bleiben und
+              // nicht mit der Karte mitdrehen.
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+              ),
               onMapReady: _onMapReady,
               onPositionChanged: (pos, _) {
                 final z = pos.zoom ?? _zoom;

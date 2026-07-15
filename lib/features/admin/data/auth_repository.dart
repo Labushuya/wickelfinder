@@ -35,24 +35,37 @@ class AuthRepository {
     required bool remember,
   }) async {
     await signInAdmin(email, password);
-    if (remember) {
-      await _storage.write(key: _kEmail, value: email);
-      await _storage.write(key: _kPassword, value: password);
-    } else {
-      await clearSavedCredentials();
+    try {
+      if (remember) {
+        await _storage.write(key: _kEmail, value: email);
+        await _storage.write(key: _kPassword, value: password);
+      } else {
+        await clearSavedCredentials();
+      }
+    } catch (_) {
+      // Secure-Storage kann auf manchen Android-OEM-Builds werfen -> Login
+      // bleibt trotzdem gueltig, nur die Persistenz entfaellt (kein Crash).
     }
   }
 
   Future<({String email, String password})?> savedCredentials() async {
-    final email = await _storage.read(key: _kEmail);
-    final password = await _storage.read(key: _kPassword);
-    if (email == null || password == null) return null;
-    return (email: email, password: password);
+    try {
+      final email = await _storage.read(key: _kEmail);
+      final password = await _storage.read(key: _kPassword);
+      if (email == null || password == null) return null;
+      return (email: email, password: password);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> clearSavedCredentials() async {
-    await _storage.delete(key: _kEmail);
-    await _storage.delete(key: _kPassword);
+    try {
+      await _storage.delete(key: _kEmail);
+      await _storage.delete(key: _kPassword);
+    } catch (_) {
+      // Ignorieren (siehe signInAdminRemember).
+    }
   }
 
   /// Beim Start: wenn keine gueltige (Nicht-Anon-)Session, aber gespeicherte

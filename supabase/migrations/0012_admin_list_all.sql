@@ -26,7 +26,7 @@ begin
   if not public.is_admin(auth.uid()) then raise exception 'admin_required'; end if;
   return query
     select cp.id, cp.name, cp.location_hint, cp.wheelchair, cp.fee, cp.fee_mode,
-           public.ST_Y(cp.geom::geometry), public.ST_X(cp.geom::geometry),
+           public.ST_Y(cp.geom::public.geometry), public.ST_X(cp.geom::public.geometry),
            cp.moderation_state, cp.hidden
     from public.community_places cp;
 end $$;
