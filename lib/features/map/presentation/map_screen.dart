@@ -251,7 +251,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
       icon: const Icon(Icons.more_vert),
       onSelected: (v) async {
         if (v == 'update') {
-          UpdateSheet.checkAndShow(context, ref, manual: true);
+          unawaited(UpdateSheet.checkAndShow(context, ref, manual: true));
         } else if (v == 'my_pins') {
           final sel = await Navigator.of(context).push<ChangingPlace>(
             MaterialPageRoute(builder: (_) => const MyPlacesScreen()),
@@ -263,9 +263,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
           );
           if (sel != null) _goTo(sel.location);
         } else if (v == 'settings') {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+          unawaited(
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          );
         }
       },
       itemBuilder: (_) => [
