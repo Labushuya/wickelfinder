@@ -50,22 +50,44 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
       _error = null;
     });
     final email = _email.text.trim();
+    final navigator = Navigator.of(context);
     try {
       if (repo.isAnonymous) {
         // Identity-Linking: E-Mail an anonyme Session haengen (loest OTP-Mail aus).
         _linking = true;
         await repo.addEmailToAnonymous(email);
+        setState(() => _awaitingOtp = true);
       } else {
-        // Normale Registrierung.
+        // Normale Registrierung. Rueckgabe AUSWERTEN, damit ein stiller Erfolg
+        // (Confirm-Email deaktiviert / E-Mail bereits vergeben) nicht als
+        // "Mail unterwegs" fehlinterpretiert wird.
         _linking = false;
-        await repo.signUp(email, _password.text);
+        final res = await repo.signUp(email, _password.text);
+        if (res.session != null) {
+          // Confirm-Email ist im Backend AUS -> direkt eingeloggt, kein Code.
+          ref.invalidate(isAdminProvider);
+          if (mounted) navigator.pop(true);
+          return;
+        }
+        final ident = res.user?.identities;
+        if (res.user != null && (ident == null || ident.isEmpty)) {
+          // Enumeration-Schutz: E-Mail existiert bereits -> keine Mail.
+          setState(
+            () => _error =
+                'Diese E-Mail ist bereits registriert. Bitte melde dich an.',
+          );
+          return;
+        }
+        // Echter Confirm-Pfad: Mail mit Code sollte unterwegs sein.
+        setState(() => _awaitingOtp = true);
       }
-      setState(() => _awaitingOtp = true);
     } on AuthException catch (e) {
       // Linking-Konflikt (E-Mail vergeben) o. Ae. -> ehrliche Meldung.
       setState(() => _error = e.message);
-    } catch (_) {
-      setState(() => _error = 'Registrierung fehlgeschlagen.');
+    } catch (e, st) {
+      // Nicht verschlucken: echten Fehler loggen + sichtbar melden.
+      debugPrint('signUp/link failed: $e\n$st');
+      setState(() => _error = 'Registrierung fehlgeschlagen: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
