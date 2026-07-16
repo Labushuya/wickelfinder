@@ -82,8 +82,22 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
         setState(() => _awaitingOtp = true);
       }
     } on AuthException catch (e) {
-      // Linking-Konflikt (E-Mail vergeben) o. Ae. -> ehrliche Meldung.
-      setState(() => _error = e.message);
+      // Bekannte Faelle nutzerfreundlich uebersetzen, statt Roh-Codes zu zeigen.
+      final msg = e.message.toLowerCase();
+      String friendly;
+      if (msg.contains('sending confirmation') ||
+          msg.contains('error sending')) {
+        friendly =
+            'Die Bestätigungs-E-Mail konnte nicht versendet werden. '
+            'Bitte später erneut versuchen (Serverproblem beim Mailversand).';
+      } else if (msg.contains('already registered') ||
+          msg.contains('already been registered') ||
+          msg.contains('user already')) {
+        friendly = 'Diese E-Mail ist bereits registriert. Bitte melde dich an.';
+      } else {
+        friendly = e.message;
+      }
+      setState(() => _error = friendly);
     } catch (e, st) {
       // Nicht verschlucken: echten Fehler loggen + sichtbar melden.
       debugPrint('signUp/link failed: $e\n$st');
