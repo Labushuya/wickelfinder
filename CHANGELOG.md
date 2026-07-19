@@ -3,6 +3,16 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.12.2] — 2026-07-19
+
+### Fixed
+- **In-App-Updater erkennt Beta-Updates wieder:** Der Versionsvergleich las
+  `-beta.N`-Suffixe falsch (z.B. `0.12.1-beta.1` wurde als `0.12.0` interpretiert),
+  sodass Updates innerhalb derselben MINOR-Version fälschlich als „bereits aktuell"
+  gemeldet wurden. Jetzt vollständiger SemVer-Precedence-Vergleich (Prerelease-
+  Reihenfolge, numerische Beta-Zähler `beta.2 < beta.10`, Build-Metadaten ignoriert).
+  Abgesichert durch Unit-Tests über die reale Release-Historie.
+
 ## [0.12.1] — 2026-07-19
 
 ### Fixed
