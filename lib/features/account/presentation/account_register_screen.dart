@@ -169,9 +169,10 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
     }
   }
 
-  /// Code erneut anfordern (Nachtrag-Modus): stoesst fuer die unbestaetigte
-  /// Registrierung eine neue Bestaetigungs-Mail an. Bei bereits bestaetigtem
-  /// Konto meldet Supabase das -> nutzerfreundlich als "bitte anmelden".
+  /// Code erneut anfordern: stoesst fuer die laufende Bestaetigung eine neue
+  /// Mail an. Waehlt den passenden Typ (Neu-Registrierung vs. E-Mail-Wechsel
+  /// beim Linking). Bei bereits bestaetigtem Konto meldet Supabase das ->
+  /// nutzerfreundlich als "bitte anmelden".
   Future<void> _resendCode() async {
     final repo = ref.read(authRepositoryProvider);
     if (repo == null) return;
@@ -186,7 +187,11 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
     });
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await repo.resendSignupOtp(email);
+      if (_linking) {
+        await repo.resendEmailChangeOtp(email);
+      } else {
+        await repo.resendSignupOtp(email);
+      }
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(content: Text('Neuer Code an $email gesendet.')),
@@ -325,11 +330,12 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
           label: const Text('Konto bestätigen'),
           onPressed: _busy ? null : _submitOtp,
         ),
-        if (_resumeOtp)
-          TextButton(
-            onPressed: _busy ? null : _resendCode,
-            child: const Text('Keinen Code erhalten? Erneut senden'),
-          ),
+        // Immer anbieten: falls die Mail nicht ankam, kann der Code neu
+        // angefordert werden (egal ob frische Registrierung oder Nachtrag).
+        TextButton(
+          onPressed: _busy ? null : _resendCode,
+          child: const Text('Keinen Code erhalten? Erneut senden'),
+        ),
       ],
     );
   }

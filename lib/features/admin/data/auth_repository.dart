@@ -49,6 +49,11 @@ class AuthRepository {
   Future<void> resendSignupOtp(String email) =>
       _client.auth.resend(type: OtpType.signup, email: email);
 
+  /// Code fuer einen laufenden E-Mail-Wechsel (Identity-Linking anon->Konto)
+  /// erneut senden.
+  Future<void> resendEmailChangeOtp(String email) =>
+      _client.auth.resend(type: OtpType.emailChange, email: email);
+
   /// Identity-Linking Schritt 1: an eine bestehende ANONYME Session eine
   /// E-Mail haengen (loest Bestaetigungs-/OTP-Mail aus). user_id bleibt gleich.
   Future<void> addEmailToAnonymous(String email) =>

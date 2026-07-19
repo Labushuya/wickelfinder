@@ -3,6 +3,14 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.12.3] — 2026-07-19
+
+### Fixed
+- **„Code erneut senden" jetzt überall im Bestätigungs-Schritt** — nicht nur im
+  Nachtrag-Weg. Kommt der Code bei der frischen Registrierung nicht an, lässt er
+  sich direkt neu anfordern (wählt intern den passenden Typ: Neu-Registrierung
+  bzw. E-Mail-Wechsel beim Identity-Linking).
+
 ## [0.12.2] — 2026-07-19
 
 ### Fixed
