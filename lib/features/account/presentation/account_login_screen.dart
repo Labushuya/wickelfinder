@@ -124,6 +124,19 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
                       ),
                 child: const Text('Passwort vergessen?'),
               ),
+              TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => AccountRegisterScreen(
+                            initialEmail: _email.text.trim(),
+                            startAtOtp: true,
+                          ),
+                        ),
+                      ),
+                child: const Text('Bestätigungscode aus E-Mail eingeben'),
+              ),
             ],
           ),
         ),

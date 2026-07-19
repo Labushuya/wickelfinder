@@ -9,9 +9,24 @@ import '../../admin/data/auth_repository.dart';
 ///    gemeldet), wird sie per Identity-Linking zu einem echten Konto
 ///    aufgewertet -> alle anonymen Beitraege bleiben erhalten (gleiche user_id).
 ///  - Sonst normale Registrierung (signUp).
-/// Beide Wege bestaetigen die E-Mail per 6-stelligem Code (OTP, kein Deep-Link).
+/// Beide Wege bestaetigen die E-Mail per Code (OTP, kein Deep-Link).
+///
+/// [startAtOtp] springt direkt in den Code-Eingabe-Schritt (mit [initialEmail]
+/// vorbelegt). Das ist der "Code nachtragen"-Weg vom Login-Screen: wurde die
+/// Registrierung unterbrochen (z.B. versehentliches Zurueck-Tippen), ist der
+/// per Mail versendete Code so weiterhin einloesbar, ohne neu zu registrieren.
 class AccountRegisterScreen extends ConsumerStatefulWidget {
-  const AccountRegisterScreen({super.key});
+  const AccountRegisterScreen({
+    super.key,
+    this.initialEmail,
+    this.startAtOtp = false,
+  });
+
+  /// Vorbelegung des E-Mail-Feldes (z.B. aus dem Login-Screen uebernommen).
+  final String? initialEmail;
+
+  /// Wenn true, startet der Screen direkt im OTP-Schritt (Code nachtragen).
+  final bool startAtOtp;
 
   @override
   ConsumerState<AccountRegisterScreen> createState() =>
@@ -29,6 +44,23 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
   bool _awaitingOtp = false;
   // true, wenn eine anonyme Session zu einem Konto aufgewertet wird (Linking).
   bool _linking = false;
+  // true im "Code nachtragen"-Modus: Registrierung lief schon, nur der Code
+  // fehlt noch. Dann ist KEIN Passwort-Setzen noetig (bei signUp bereits gesetzt).
+  bool _resumeOtp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.startAtOtp) {
+      // Direkt in den Code-Schritt springen (Code nachtragen nach Abbruch).
+      _email.text = widget.initialEmail?.trim() ?? '';
+      _awaitingOtp = true;
+      _linking = false;
+      _resumeOtp = true;
+    } else if (widget.initialEmail != null) {
+      _email.text = widget.initialEmail!.trim();
+    }
+  }
 
   @override
   void dispose() {
@@ -137,6 +169,44 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
     }
   }
 
+  /// Code erneut anfordern (Nachtrag-Modus): stoesst fuer die unbestaetigte
+  /// Registrierung eine neue Bestaetigungs-Mail an. Bei bereits bestaetigtem
+  /// Konto meldet Supabase das -> nutzerfreundlich als "bitte anmelden".
+  Future<void> _resendCode() async {
+    final repo = ref.read(authRepositoryProvider);
+    if (repo == null) return;
+    final email = _email.text.trim();
+    if (email.isEmpty) {
+      setState(() => _error = 'Bitte zuerst deine E-Mail eingeben.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await repo.resendSignupOtp(email);
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Neuer Code an $email gesendet.')),
+        );
+      }
+    } on AuthException catch (e) {
+      final msg = e.message.toLowerCase();
+      setState(() {
+        _error = msg.contains('already') || msg.contains('confirmed')
+            ? 'Dieses Konto ist bereits bestätigt. Bitte melde dich an.'
+            : e.message;
+      });
+    } catch (e, st) {
+      debugPrint('resend failed: $e\n$st');
+      setState(() => _error = 'Erneutes Senden fehlgeschlagen: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -206,10 +276,28 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Wir haben dir einen 6-stelligen Code an ${_email.text.trim()} '
-          'geschickt. Gib ihn hier ein, um dein Konto zu bestätigen.',
+          _resumeOtp
+              ? 'Gib den Code ein, den wir an ${_email.text.trim()} geschickt '
+                    'haben, um deine Registrierung abzuschließen.'
+              : 'Wir haben dir einen Code an ${_email.text.trim()} '
+                    'geschickt. Gib ihn hier ein, um dein Konto zu bestätigen.',
         ),
         const SizedBox(height: 20),
+        // Im Nachtrag-Modus die E-Mail editierbar lassen (evtl. beim Login
+        // vertippt) und ein erneutes Senden anbieten.
+        if (_resumeOtp) ...[
+          TextField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              labelText: 'E-Mail',
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         TextField(
           controller: _otp,
           keyboardType: TextInputType.number,
@@ -237,6 +325,11 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
           label: const Text('Konto bestätigen'),
           onPressed: _busy ? null : _submitOtp,
         ),
+        if (_resumeOtp)
+          TextButton(
+            onPressed: _busy ? null : _resendCode,
+            child: const Text('Keinen Code erhalten? Erneut senden'),
+          ),
       ],
     );
   }
