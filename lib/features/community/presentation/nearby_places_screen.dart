@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/location/location_service.dart';
 import '../../map/domain/changing_place.dart';
+import '../../search/presentation/address_search_bar.dart';
 import 'accumulated_places.dart';
 import 'pin_list.dart';
 
@@ -34,6 +35,9 @@ class _NearbyPlacesScreenState extends ConsumerState<NearbyPlacesScreen> {
   String _query = '';
   LatLng? _origin;
   bool _locating = true;
+  // true, sobald der Nutzer per Ort/PLZ-Suche einen Bezugspunkt gewaehlt hat.
+  // Verhindert, dass der (async) GPS-Fix die manuelle Wahl ueberschreibt.
+  bool _manualOrigin = false;
 
   @override
   void initState() {
@@ -44,13 +48,14 @@ class _NearbyPlacesScreenState extends ConsumerState<NearbyPlacesScreen> {
   Future<void> _resolveOrigin() async {
     // Sofort der letzte bekannte Standort (kein Warten), dann praeziser Fix.
     final last = await LocationService.lastKnown();
-    if (mounted && last != null) {
+    if (mounted && last != null && !_manualOrigin) {
       setState(() => _origin = last);
     }
     final current = await LocationService.current();
     if (mounted) {
       setState(() {
-        if (current != null) _origin = current;
+        // Manuell gewaehlten Bezugspunkt NICHT ueberschreiben.
+        if (current != null && !_manualOrigin) _origin = current;
         _locating = false;
       });
     }
@@ -79,12 +84,49 @@ class _NearbyPlacesScreenState extends ConsumerState<NearbyPlacesScreen> {
       appBar: AppBar(title: const Text('Pins in der Nähe')),
       body: Column(
         children: [
-          if (origin == null && !_locating)
+          // Ort/PLZ/Adresse suchen -> setzt den Bezugspunkt (Nominatim).
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: AddressSearchBar(
+              onSelected: (target) => setState(() {
+                _origin = target;
+                _manualOrigin = true;
+                _locating = false;
+              }),
+            ),
+          ),
+          if (_manualOrigin)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Row(
+                children: [
+                  const Icon(Icons.place_outlined, size: 15),
+                  const SizedBox(width: 4),
+                  const Expanded(
+                    child: Text(
+                      'Sortiert nach Entfernung zum gesuchten Ort',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _manualOrigin = false;
+                        _locating = true;
+                      });
+                      _resolveOrigin();
+                    },
+                    child: const Text('Mein Standort'),
+                  ),
+                ],
+              ),
+            ),
+          if (origin == null && !_locating && !_manualOrigin)
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Text(
-                'Standort nicht verfügbar – Liste ist unsortiert. '
-                'Standortfreigabe erlauben für Sortierung nach Entfernung.',
+                'Standort nicht verfügbar – nach einem Ort/einer PLZ suchen '
+                'oder Standortfreigabe erlauben, um nach Entfernung zu sortieren.',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ),
