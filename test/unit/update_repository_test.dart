@@ -93,7 +93,10 @@ void main() {
         returnsNormally,
       );
       expect(UpdateRepository.isNewer('garbage', '1.0.0'), isFalse);
-      expect(UpdateRepository.isNewer('1.x.2', '1.0.2'), isTrue);
+      // Kaputtes Core-Segment ('x') wird zu 0 -> '1.x.2' == '1.0.2' == [1,0,2],
+      // also NICHT neuer. Ein echt hoeheres intaktes Segment gewinnt dagegen.
+      expect(UpdateRepository.isNewer('1.x.2', '1.0.2'), isFalse);
+      expect(UpdateRepository.isNewer('1.9.0', '1.x.0'), isTrue);
     });
 
     test('fuehrendes v/V wird defensiv toleriert', () {
