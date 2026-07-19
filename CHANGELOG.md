@@ -3,6 +3,14 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.14.1] — 2026-07-19
+
+### Added
+- **„Pins in der Nähe" — Ort/PLZ-Suche:** Über der Liste kann jetzt ein Ort,
+  eine PLZ oder Adresse gesucht werden (OpenStreetMap-Nominatim). Der gewählte
+  Ort wird zum Bezugspunkt — die Liste sortiert dann nach Entfernung dorthin.
+  „Mein Standort" schaltet zurück auf die GPS-Position.
+
 ## [0.14.0] — 2026-07-19
 
 ### Added
