@@ -19,7 +19,7 @@ Plätze melden, bewerten und gegenseitig verifizieren.
 ## ✨ Features
 
 - 🗺️ **Karte** mit Wickelplätzen in der Umgebung (OpenStreetMap)
-- 📍 **Standortbasierte Suche** – finde den nächsten Wickeltisch
+- 📍 **Standortbasierte Suche** – finde den nächsten Wickeltisch, „Pins in der Nähe" nach Entfernung sortiert
 - ♿ **Details** zu Barrierefreiheit, Kosten (kostenlos/bedingt/kostenpflichtig) und Lage
 - ⭐ **Bewerten & Melden** ohne Konto (anonym): Sterne, Eigenschafts-Tags, „nicht vorhanden" /
   „geschlossen" / „falscher Ort" melden und „doch vorhanden" bestätigen

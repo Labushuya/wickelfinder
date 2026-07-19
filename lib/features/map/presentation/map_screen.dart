@@ -17,6 +17,7 @@ import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/all_places_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/my_places_screen.dart';
+import '../../community/presentation/nearby_places_screen.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../account/presentation/account_login_screen.dart';
 import '../../search/presentation/address_search_bar.dart';
@@ -268,6 +269,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
             MaterialPageRoute(builder: (_) => const AllPlacesScreen()),
           );
           if (sel != null) _goTo(sel.location);
+        } else if (v == 'nearby') {
+          final sel = await Navigator.of(context).push<ChangingPlace>(
+            MaterialPageRoute(builder: (_) => const NearbyPlacesScreen()),
+          );
+          if (sel != null) _goTo(sel.location);
         } else if (v == 'settings') {
           unawaited(
             Navigator.of(
@@ -299,6 +305,16 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ],
             ),
           ),
+        const PopupMenuItem(
+          value: 'nearby',
+          child: Row(
+            children: [
+              Icon(Icons.near_me_outlined, size: 20),
+              SizedBox(width: 10),
+              Text('Pins in der Nähe'),
+            ],
+          ),
+        ),
         const PopupMenuItem(
           value: 'settings',
           child: Row(

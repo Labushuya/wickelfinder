@@ -2,6 +2,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../map/domain/changing_place.dart';
+import '../domain/admin_place_feedback.dart';
 import '../domain/place_flag.dart';
 import '../domain/place_stats.dart';
 import '../domain/place_tag.dart';
@@ -115,6 +116,24 @@ class CommunityRepository {
       await _client.rpc<void>('confirm_present', params: {'p_ref': placeRef});
     } on PostgrestException catch (e) {
       throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Rohe Melde-/Bestaetigungs-Zaehler eines Platzes (nur Admin; serverseitig
+  /// via is_admin() geprueft). Ohne Adminrecht -> null (RPC wirft admin_required).
+  Future<AdminPlaceFeedback?> adminPlaceFeedback(String placeRef) async {
+    try {
+      final rows = await _client.rpc<List<dynamic>>(
+        'admin_place_feedback',
+        params: {'p_ref': placeRef},
+      );
+      if (rows.isEmpty) return AdminPlaceFeedback.empty;
+      return AdminPlaceFeedback.fromJson(
+        (rows.first as Map).cast<String, dynamic>(),
+      );
+    } catch (_) {
+      // Kein Adminrecht / kein Backend -> Block wird ausgeblendet.
+      return null;
     }
   }
 
