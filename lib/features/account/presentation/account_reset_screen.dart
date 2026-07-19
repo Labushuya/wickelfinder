@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../admin/data/auth_repository.dart';
 
-/// Passwort-Reset: E-Mail anfordern -> 6-stelligen Code aus der Mail eingeben
+/// Passwort-Reset: E-Mail anfordern -> Code aus der Mail eingeben
 /// -> neues Passwort setzen. Kein Deep-Link noetig (OTP-Weg, type=recovery).
 class AccountResetScreen extends ConsumerStatefulWidget {
   const AccountResetScreen({super.key});

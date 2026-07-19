@@ -44,12 +44,17 @@ class AuthRepository {
   Future<AuthResponse> signUp(String email, String password) =>
       _client.auth.signUp(email: email, password: password);
 
+  /// Bestaetigungs-Code fuer eine unbestaetigte Registrierung erneut senden
+  /// (z.B. wenn der urspruengliche Code verloren ging / der Flow abbrach).
+  Future<void> resendSignupOtp(String email) =>
+      _client.auth.resend(type: OtpType.signup, email: email);
+
   /// Identity-Linking Schritt 1: an eine bestehende ANONYME Session eine
   /// E-Mail haengen (loest Bestaetigungs-/OTP-Mail aus). user_id bleibt gleich.
   Future<void> addEmailToAnonymous(String email) =>
       _client.auth.updateUser(UserAttributes(email: email));
 
-  /// OTP-Bestaetigung (6-stelliger Code aus der Mail). type=emailChange beim
+  /// OTP-Bestaetigung (Code aus der Mail). type=emailChange beim
   /// Anonymous-Upgrade, type=signup bei Neu-Registrierung, type=recovery bei
   /// Passwort-Reset.
   Future<void> verifyEmailOtp({

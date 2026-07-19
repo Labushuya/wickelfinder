@@ -3,6 +3,21 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.12.1] — 2026-07-19
+
+### Fixed
+- **Bestätigungscode nach Abbruch nachtragbar:** Wird der Registrierungs-Flow
+  unterbrochen (z.B. versehentliches Zurück), lässt sich der bereits versendete
+  Code jetzt über „Bestätigungscode aus E-Mail eingeben" auf dem Anmelden-Screen
+  nachtragen — ohne komplett neu zu registrieren. Inklusive „Code erneut senden".
+- **Texte an tatsächliche Code-Länge angepasst** („Code" statt „6-stellig"),
+  passt damit unabhängig von der in Supabase eingestellten OTP-Länge.
+
+### Hinweis
+- Konten, die während der Umstellung der Mailvorlage (Link → Code) angelegt
+  wurden, konnten sich einmalig abweichend verhalten (nachträgliche Aktivierung).
+  Bei reiner Code-Bestätigung tritt das nicht mehr auf.
+
 ## [0.12.0] — 2026-07-16
 
 ### Added
