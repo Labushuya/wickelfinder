@@ -2,6 +2,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../map/domain/changing_place.dart';
+import '../domain/place_flag.dart';
 import '../domain/place_stats.dart';
 import '../domain/place_tag.dart';
 import 'anon_session.dart';
@@ -26,6 +27,7 @@ class CommunityException implements Exception {
     'geo_rate_limit' => 'Hier hast du kürzlich schon einen Platz gemeldet.',
     'geo_cluster_cap' => 'In diesem Bereich gibt es bereits viele Einträge.',
     'self_rating' => 'Eigene Plätze können nicht bewertet werden.',
+    'self_flag' => 'Eigene Plätze können nicht gemeldet werden.',
     'auth_required' => 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
     'bad_stars' => 'Ungültige Bewertung.',
     'too_many_tags' => 'Bitte höchstens 10 Eigenschaften auswählen.',
@@ -84,6 +86,34 @@ class CommunityRepository {
       );
     } on PostgrestException catch (e) {
       // RPC-raise landet in message/code -> auf bekannte Codes mappen.
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Meldet einen Platz als "nicht (mehr) vorhanden" / geschlossen / falscher
+  /// Ort. Anonym moeglich (lazy Sign-In), wie Bewerten. Upsert pro Nutzer.
+  Future<void> submitFlag({
+    required String placeRef,
+    required FlagReason reason,
+  }) async {
+    await _session.ensureSignedIn();
+    try {
+      await _client.rpc<void>(
+        'submit_flag',
+        params: {'p_ref': placeRef, 'p_reason': reason.wire},
+      );
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Bestaetigt, dass ein Platz DOCH vorhanden ist (macht Soft-Hide reversibel).
+  /// Anonym moeglich (lazy Sign-In). Upsert pro Nutzer.
+  Future<void> confirmPresent({required String placeRef}) async {
+    await _session.ensureSignedIn();
+    try {
+      await _client.rpc<void>('confirm_present', params: {'p_ref': placeRef});
+    } on PostgrestException catch (e) {
       throw CommunityException(_extractCode(e.message), e.message);
     }
   }
@@ -281,6 +311,7 @@ class CommunityRepository {
       'geo_cluster_cap',
       'rate_limit',
       'self_rating',
+      'self_flag',
       'auth_required',
       'bad_stars',
       'too_many_tags',

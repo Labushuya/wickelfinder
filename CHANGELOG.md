@@ -3,6 +3,18 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.13.0] — 2026-07-19
+
+### Added
+- **Existenz-Feedback:** Ein Platz kann als „nicht vorhanden", „dauerhaft
+  geschlossen" oder „falscher Ort" gemeldet und umgekehrt als „doch vorhanden"
+  bestätigt werden — anonym, ohne Konto (wie Bewerten).
+- **Getrennte Behandlung:** „nicht vorhanden"/„geschlossen" führen ab genügend
+  unabhängigen, gereiften Meldungen zu „Existenz fraglich" (Soft-Hide). „Falscher
+  Ort" zeigt stattdessen den Hinweis „Standort möglicherweise ungenau" — der Platz
+  bleibt sichtbar, wird nicht ausgeblendet.
+- Detail-Sheet zeigt dezente Zähler (Meldungen / Bestätigungen).
+
 ## [0.12.3] — 2026-07-19
 
 ### Fixed
