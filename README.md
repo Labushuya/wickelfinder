@@ -21,7 +21,8 @@ Plätze melden, bewerten und gegenseitig verifizieren.
 - 🗺️ **Karte** mit Wickelplätzen in der Umgebung (OpenStreetMap)
 - 📍 **Standortbasierte Suche** – finde den nächsten Wickeltisch
 - ♿ **Details** zu Barrierefreiheit, Kosten (kostenlos/bedingt/kostenpflichtig) und Lage
-- ⭐ **Bewerten & Melden** ohne Konto (anonym): Sterne, Eigenschafts-Tags, „nicht vorhanden"
+- ⭐ **Bewerten & Melden** ohne Konto (anonym): Sterne, Eigenschafts-Tags, „nicht vorhanden" /
+  „geschlossen" / „falscher Ort" melden und „doch vorhanden" bestätigen
 - 🧑‍🤝‍🧑 **Community-Konsens**: Feedback vieler Nutzer relativiert die Angaben sichtbar
 - 👤 **Optionales Konto** (E-Mail): eigene Plätze hinzufügen & verwalten, „Meine Pins"
 - 🌗 **Hell-/Dunkel-Modus**, Offline-Karten-Cache, In-App-Updater

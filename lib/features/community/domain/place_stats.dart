@@ -13,6 +13,8 @@ class PlaceStats {
     required this.confirmCount,
     required this.isQuestionable,
     this.tagCounts = const {},
+    this.wrongLocationCount = 0,
+    this.locationDisputed = false,
   });
 
   final String placeRef;
@@ -31,6 +33,13 @@ class PlaceStats {
   /// Leer, wenn noch keine getaggte Bewertung vorliegt.
   final Map<PlaceTag, int> tagCounts;
 
+  /// Gereifte "falscher Ort"-Meldungen. Getrennt vom Soft-Hide: der Platz wird
+  /// NICHT ausgeblendet, sondern nur als "Standort ungenau" markiert.
+  final int wrongLocationCount;
+
+  /// True, wenn genug "falscher Ort"-Meldungen vorliegen -> Hinweis anzeigen.
+  final bool locationDisputed;
+
   static PlaceStats fromJson(Map<String, dynamic> j) {
     final avg = j['avg_stars'];
     return PlaceStats(
@@ -41,6 +50,8 @@ class PlaceStats {
       confirmCount: (j['confirm_count'] as num?)?.toInt() ?? 0,
       isQuestionable: j['is_questionable'] as bool? ?? false,
       tagCounts: _parseTagCounts(j['tag_counts']),
+      wrongLocationCount: (j['wrong_loc_count'] as num?)?.toInt() ?? 0,
+      locationDisputed: j['location_disputed'] as bool? ?? false,
     );
   }
 
@@ -72,5 +83,7 @@ class PlaceStats {
     confirmCount: 0,
     isQuestionable: false,
     tagCounts: const {},
+    wrongLocationCount: 0,
+    locationDisputed: false,
   );
 }

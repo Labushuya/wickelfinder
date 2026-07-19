@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bottom_toast.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
+import '../../community/domain/place_flag.dart';
 import '../../community/domain/place_stats.dart';
 import '../../community/domain/place_tag.dart';
 import '../../community/presentation/accumulated_places.dart';
@@ -128,6 +129,30 @@ class PlaceDetailSheet extends ConsumerWidget {
                       onPressed: () => _rate(context, ref, repo, myRating),
                     ),
                   ),
+                  // Existenz-Feedback: fuer JEDEN sichtbar (anonym, kein Konto).
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: const Text('Doch vorhanden'),
+                          onPressed: () => _confirmPresent(context, ref, repo),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.report_gmailerrorred_outlined),
+                          label: const Text('Nicht vorhanden'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.error,
+                          ),
+                          onPressed: () => _flag(context, ref, repo),
+                        ),
+                      ),
+                    ],
+                  ),
                   if (canManage) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -250,6 +275,109 @@ class PlaceDetailSheet extends ConsumerWidget {
       }
     }
   }
+
+  /// "Nicht vorhanden melden": erst Grund waehlen, dann Rueckfrage, dann senden.
+  Future<void> _flag(
+    BuildContext context,
+    WidgetRef ref,
+    CommunityRepository repo,
+  ) async {
+    // 1. Grund waehlen (kein 'other' — bewusst weggelassen).
+    final reason = await showModalBottomSheet<FlagReason>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: Text(
+                'Was stimmt mit diesem Platz nicht?',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final r in FlagReason.values)
+              ListTile(
+                title: Text(r.label),
+                onTap: () => Navigator.pop(sheetContext, r),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (reason == null) return;
+    if (!context.mounted) return;
+
+    // 2. Rueckfrage (folgenreiche Aktion).
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Meldung absenden?'),
+        content: Text(
+          'Du meldest „${place.name ?? 'diesen Wickelplatz'}" als: '
+          '${reason.label}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Melden'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    // 3. Senden + Refresh.
+    try {
+      await repo.submitFlag(placeRef: place.placeRef, reason: reason);
+      ref.invalidate(statsProvider(place.placeRef));
+      await refreshCommunityDataFromWidget(ref);
+      if (context.mounted) {
+        showBottomToast(context, 'Danke, deine Meldung wurde gespeichert.');
+      }
+    } on CommunityException catch (e) {
+      if (context.mounted) showBottomToast(context, e.userMessage);
+    } catch (_) {
+      if (context.mounted) {
+        showBottomToast(
+          context,
+          'Meldung fehlgeschlagen. Bitte später erneut.',
+        );
+      }
+    }
+  }
+
+  /// "Doch vorhanden" bestaetigen (direkt, ohne Rueckfrage).
+  Future<void> _confirmPresent(
+    BuildContext context,
+    WidgetRef ref,
+    CommunityRepository repo,
+  ) async {
+    try {
+      await repo.confirmPresent(placeRef: place.placeRef);
+      ref.invalidate(statsProvider(place.placeRef));
+      await refreshCommunityDataFromWidget(ref);
+      if (context.mounted) {
+        showBottomToast(context, 'Danke, als vorhanden bestätigt.');
+      }
+    } on CommunityException catch (e) {
+      if (context.mounted) showBottomToast(context, e.userMessage);
+    } catch (_) {
+      if (context.mounted) {
+        showBottomToast(
+          context,
+          'Bestätigung fehlgeschlagen. Bitte später erneut.',
+        );
+      }
+    }
+  }
 }
 
 /// Zeigt Sternschnitt + Anzahl Bewertungen; Hinweis bei "fraglich".
@@ -260,30 +388,97 @@ class _RatingSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (stats.avgStars == null) {
-      return Text('Noch keine Bewertungen', style: theme.textTheme.bodySmall);
-    }
-    return Row(
-      children: [
-        const Icon(Icons.star, color: Colors.amber, size: 20),
-        const SizedBox(width: 4),
-        Text(
-          stats.avgStars!.toStringAsFixed(1),
-          style: theme.textTheme.titleMedium,
-        ),
-        const SizedBox(width: 6),
-        Text('(${stats.ratingCount})', style: theme.textTheme.bodySmall),
-        if (stats.isQuestionable) ...[
-          const SizedBox(width: 12),
-          Icon(Icons.help_outline, size: 18, color: theme.colorScheme.error),
-          const SizedBox(width: 4),
-          Text(
-            'Existenz fraglich',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.error,
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    // Dezente Zaehler, worauf der Status beruht (Meldungen / Bestaetigungen).
+    final counters = <Widget>[
+      if (stats.flagCount > 0) ...[
+        const SizedBox(width: 12),
+        Icon(Icons.flag_outlined, size: 15, color: theme.colorScheme.error),
+        const SizedBox(width: 2),
+        Text('${stats.flagCount}', style: muted),
+      ],
+      if (stats.confirmCount > 0) ...[
+        const SizedBox(width: 10),
+        Icon(Icons.check, size: 15, color: theme.colorScheme.primary),
+        const SizedBox(width: 2),
+        Text('${stats.confirmCount}', style: muted),
+      ],
+    ];
+
+    // Der Standort-Hinweis ist unabhaengig von vorhandenen Bewertungen.
+    final locationHint = stats.locationDisputed
+        ? Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.wrong_location_outlined,
+                  size: 16,
+                  color: theme.colorScheme.tertiary,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Standort möglicherweise ungenau',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          )
+        : null;
+
+    if (stats.avgStars == null) {
+      // Ohne Bewertungen trotzdem Melde-Zaehler + Standort-Hinweis zeigen.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Noch keine Bewertungen', style: theme.textTheme.bodySmall),
+              ...counters,
+            ],
           ),
+          if (locationHint != null) locationHint,
         ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.star, color: Colors.amber, size: 20),
+            const SizedBox(width: 4),
+            Text(
+              stats.avgStars!.toStringAsFixed(1),
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(width: 6),
+            Text('(${stats.ratingCount})', style: theme.textTheme.bodySmall),
+            if (stats.isQuestionable) ...[
+              const SizedBox(width: 12),
+              Icon(
+                Icons.help_outline,
+                size: 18,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Existenz fraglich',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+            ...counters,
+          ],
+        ),
+        if (locationHint != null) locationHint,
       ],
     );
   }
