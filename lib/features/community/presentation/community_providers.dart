@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/supabase/supabase_init.dart';
+import '../../admin/data/auth_repository.dart';
 import '../../map/domain/changing_place.dart';
 import '../data/community_cache.dart';
 import '../data/community_repository.dart';
+import '../domain/admin_place_feedback.dart';
 import '../domain/place_stats.dart';
 
 /// Stellt das [CommunityRepository] bereit — aber nur, wenn Supabase
@@ -71,6 +73,11 @@ final myRatingProvider = FutureProvider.family<MyRating?, String>((
   ref,
   placeRef,
 ) async {
+  // Bei Login / erstem anonymen Sign-In neu auswerten: die anonyme Session
+  // entsteht erst LAZY bei der ersten Bewertung. Ohne dieses watch bliebe der
+  // Wert null (Sheet wurde vor der Session gebaut) und der Button zeigte
+  // faelschlich weiter "Bewerten" statt "Bewertung aendern".
+  ref.watch(authChangesProvider);
   final repo = ref.watch(communityRepositoryProvider);
   if (repo == null) return null;
   return repo.myRating(placeRef);
@@ -90,6 +97,16 @@ final adminAllPlacesProvider = FutureProvider<List<ChangingPlace>>((ref) async {
   if (repo == null) return const [];
   return repo.adminAllPlaces();
 });
+
+/// Rohe Melde-/Bestaetigungs-Zaehler eines Platzes (nur Admin). Null ohne
+/// Adminrecht -> der Detail-Block wird dann gar nicht angezeigt.
+final adminPlaceFeedbackProvider =
+    FutureProvider.family<AdminPlaceFeedback?, String>((ref, placeRef) async {
+      ref.watch(authChangesProvider); // bei Login/Logout neu auswerten
+      final repo = ref.watch(communityRepositoryProvider);
+      if (repo == null) return null;
+      return repo.adminPlaceFeedback(placeRef);
+    });
 
 /// Nach einer Schreibaktion Cache + Ansichten aktualisieren (ohne Reload-Sturm).
 Future<void> refreshCommunityData(Ref ref) async {

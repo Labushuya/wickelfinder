@@ -3,6 +3,22 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.14.0] — 2026-07-19
+
+### Added
+- **„Pins in der Nähe"** im Menü: alle Wickelplätze (Community + OpenStreetMap)
+  nach Entfernung zum aktuellen Standort sortiert, mit Distanz je Eintrag; Tippen
+  fliegt zur Stelle. Ohne Standortfreigabe unsortierte Liste.
+- **Admin-Meldungsübersicht** im Pin-Detail: rohe Zähler pro Grund (nicht
+  vorhanden / geschlossen / falscher Ort) plus Bestätigungen und Bewertungen —
+  nur für angemeldete Admins sichtbar.
+
+### Fixed
+- **Bewerten-Button** zeigt nach der ersten Bewertung korrekt „Bewertung ändern"
+  (statt weiter „Bewerten") und öffnet den Dialog vorbefüllt. Pro Person zählt
+  weiterhin **genau eine** Bewertung — das war serverseitig immer schon so
+  erzwungen; nur die Beschriftung wirkte irreführend.
+
 ## [0.13.0] — 2026-07-19
 
 ### Added

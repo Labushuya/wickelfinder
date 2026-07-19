@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bottom_toast.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
+import '../../community/domain/admin_place_feedback.dart';
 import '../../community/domain/place_flag.dart';
 import '../../community/domain/place_stats.dart';
 import '../../community/domain/place_tag.dart';
@@ -84,6 +85,7 @@ class PlaceDetailSheet extends ConsumerWidget {
                       onEdit: () => _edit(context),
                     ),
                   _CommunityConsensus(stats: stats),
+                  if (isAdmin) _AdminFeedback(placeRef: place.placeRef),
                   const SizedBox(height: 4),
                   if (place.locationHint != null)
                     _InfoRow(
@@ -480,6 +482,84 @@ class _RatingSummary extends StatelessWidget {
         ),
         if (locationHint != null) locationHint,
       ],
+    );
+  }
+}
+
+/// Admin-only: rohe Melde-/Bestaetigungs-/Bewertungszaehler eines Platzes.
+class _AdminFeedback extends ConsumerWidget {
+  const _AdminFeedback({required this.placeRef});
+  final String placeRef;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final fb = ref.watch(adminPlaceFeedbackProvider(placeRef)).valueOrNull;
+    if (fb == null || !fb.hasAny) return const SizedBox.shrink();
+
+    Widget row(IconData icon, Color color, String label, int n) => Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
+          Text('$n', style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Meldungen (Admin, roh)',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          row(
+            Icons.block,
+            theme.colorScheme.error,
+            'Nicht vorhanden',
+            fb.notPresent,
+          ),
+          row(
+            Icons.lock_outline,
+            theme.colorScheme.error,
+            'Dauerhaft geschlossen',
+            fb.closed,
+          ),
+          row(
+            Icons.wrong_location_outlined,
+            theme.colorScheme.tertiary,
+            'Falscher Ort',
+            fb.wrongLocation,
+          ),
+          if (fb.other > 0)
+            row(
+              Icons.help_outline,
+              theme.colorScheme.onSurfaceVariant,
+              'Sonstiges',
+              fb.other,
+            ),
+          row(
+            Icons.check_circle_outline,
+            theme.colorScheme.primary,
+            'Doch vorhanden',
+            fb.confirmed,
+          ),
+          row(Icons.star_outline, Colors.amber, 'Bewertungen', fb.rated),
+        ],
+      ),
     );
   }
 }
