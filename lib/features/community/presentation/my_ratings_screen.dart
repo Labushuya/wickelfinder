@@ -141,8 +141,9 @@ class _RatingTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final place = rated.place;
-    final hasName = place?.name != null && place!.name!.trim().isNotEmpty;
-    final title = hasName ? place!.name! : 'Wickelplatz (ohne Namen)';
+    final name = place?.name?.trim();
+    final hasName = name != null && name.isNotEmpty;
+    final title = hasName ? name : 'Wickelplatz (ohne Namen)';
 
     // Sterne kompakt darstellen.
     final stars = Row(
