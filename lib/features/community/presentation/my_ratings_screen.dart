@@ -113,15 +113,14 @@ class _MyRatingsScreenState extends ConsumerState<MyRatingsScreen> {
       ref.invalidate(myRatingsProvider);
       ref.invalidate(myRatingProvider(rated.entry.placeRef));
       ref.invalidate(statsProvider(rated.entry.placeRef));
-      if (context.mounted) {
-        showBottomToast(context, 'Bewertung aktualisiert.');
-      }
+      if (!mounted) return;
+      showBottomToast(context, 'Bewertung aktualisiert.');
     } on CommunityException catch (e) {
-      if (context.mounted) showBottomToast(context, e.userMessage);
+      if (!mounted) return;
+      showBottomToast(context, e.userMessage);
     } catch (_) {
-      if (context.mounted) {
-        showBottomToast(context, 'Aktualisieren fehlgeschlagen.');
-      }
+      if (!mounted) return;
+      showBottomToast(context, 'Aktualisieren fehlgeschlagen.');
     }
   }
 }
