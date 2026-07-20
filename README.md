@@ -24,7 +24,7 @@ Plätze melden, bewerten und gegenseitig verifizieren.
 - ⭐ **Bewerten & Melden** ohne Konto (anonym): Sterne, Eigenschafts-Tags, „nicht vorhanden" /
   „geschlossen" / „falscher Ort" melden und „doch vorhanden" bestätigen
 - 🧑‍🤝‍🧑 **Community-Konsens**: Feedback vieler Nutzer relativiert die Angaben sichtbar
-- 👤 **Optionales Konto** (E-Mail): eigene Plätze hinzufügen & verwalten, „Meine Pins"
+- 👤 **Optionales Konto** (E-Mail): eigene Plätze hinzufügen & verwalten, „Meine Pins", „Meine Bewertungen"
 - 🌗 **Hell-/Dunkel-Modus**, Offline-Karten-Cache, In-App-Updater
 - 🔒 **Datensparsam & DSGVO**: keine Tracker, Standort on-device, Datenexport & Löschung in der App
 

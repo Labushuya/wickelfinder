@@ -21,6 +21,10 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
   bool _busy = false;
   String? _error;
   bool _awaitingOtp = false;
+  // true, sobald der OTP-Code EINMAL verifiziert wurde (Recovery-Session steht).
+  // Verhindert, dass ein fehlgeschlagenes setPassword den bereits verbrauchten
+  // Token erneut verifizieren will ("Token has expired").
+  bool _otpVerified = false;
 
   @override
   void dispose() {
@@ -63,11 +67,17 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await repo.verifyEmailOtp(
-        email: _email.text.trim(),
-        token: _otp.text.trim(),
-        type: OtpType.recovery,
-      );
+      // OTP nur EINMAL einloesen — danach steht die Recovery-Session, und ein
+      // erneuter setPassword-Versuch (z. B. nach "gleiches Passwort") braucht
+      // den Token nicht mehr.
+      if (!_otpVerified) {
+        await repo.verifyEmailOtp(
+          email: _email.text.trim(),
+          token: _otp.text.trim(),
+          type: OtpType.recovery,
+        );
+        _otpVerified = true;
+      }
       await repo.setPassword(_newPassword.text);
       if (!mounted) return;
       messenger.showSnackBar(
@@ -141,18 +151,23 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Code aus der Mail an ${_email.text.trim()} eingeben und neues Passwort setzen.',
+          _otpVerified
+              ? 'Code bestätigt. Wähle jetzt dein neues Passwort.'
+              : 'Code aus der Mail an ${_email.text.trim()} eingeben und neues Passwort setzen.',
         ),
         const SizedBox(height: 20),
-        TextField(
-          controller: _otp,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Code',
-            prefixIcon: Icon(Icons.pin_outlined),
+        // Nach erfolgreicher Verifizierung ist der Code nicht mehr nötig.
+        if (!_otpVerified) ...[
+          TextField(
+            controller: _otp,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Code',
+              prefixIcon: Icon(Icons.pin_outlined),
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
         TextField(
           controller: _newPassword,
           obscureText: true,

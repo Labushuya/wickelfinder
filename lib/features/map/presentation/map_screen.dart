@@ -17,6 +17,7 @@ import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/all_places_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/my_places_screen.dart';
+import '../../community/presentation/my_ratings_screen.dart';
 import '../../community/presentation/nearby_places_screen.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../account/presentation/account_login_screen.dart';
@@ -274,6 +275,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
             MaterialPageRoute(builder: (_) => const NearbyPlacesScreen()),
           );
           if (sel != null) _goTo(sel.location);
+        } else if (v == 'my_ratings') {
+          final target = await Navigator.of(context).push<LatLng>(
+            MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+          );
+          if (target != null) _goTo(target);
         } else if (v == 'settings') {
           unawaited(
             Navigator.of(
@@ -315,6 +321,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ],
           ),
         ),
+        if (hasBackend)
+          const PopupMenuItem(
+            value: 'my_ratings',
+            child: Row(
+              children: [
+                Icon(Icons.star_outline, size: 20),
+                SizedBox(width: 10),
+                Text('Meine Bewertungen'),
+              ],
+            ),
+          ),
         const PopupMenuItem(
           value: 'settings',
           child: Row(
