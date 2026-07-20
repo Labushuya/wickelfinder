@@ -15,6 +15,24 @@ class MyRating {
   final Set<PlaceTag> tags;
 }
 
+/// Eine eigene Bewertung MIT ihrem place_ref und (optional) gespeicherten
+/// Koordinaten — Grundlage der "Meine Bewertungen"-Liste.
+class MyRatingEntry {
+  const MyRatingEntry({
+    required this.placeRef,
+    required this.rating,
+    this.lat,
+    this.lon,
+  });
+  final String placeRef;
+  final MyRating rating;
+  final double? lat;
+  final double? lon;
+
+  /// True, wenn Koordinaten gespeichert sind -> Karten-Sprung moeglich.
+  bool get hasCoords => lat != null && lon != null;
+}
+
 /// Fehler aus einem Community-RPC, mit maschinenlesbarem [code]
 /// (z. B. 'rate_limit', 'self_rating', 'auth_required').
 class CommunityException implements Exception {
@@ -70,10 +88,14 @@ class CommunityRepository {
   }
 
   /// Sendet eine Bewertung (1-5 Sterne + optionale Tags). Meldet lazy anonym an.
+  /// [lat]/[lon] optional: die Koordinaten des Platzes werden mitgespeichert,
+  /// damit "Meine Bewertungen" spaeter zum Platz zurueckfuehren kann.
   Future<void> submitRating({
     required String placeRef,
     required int stars,
     Set<PlaceTag> tags = const {},
+    double? lat,
+    double? lon,
   }) async {
     await _session.ensureSignedIn();
     try {
@@ -83,6 +105,8 @@ class CommunityRepository {
           'p_ref': placeRef,
           'p_stars': stars,
           'p_tags': tags.map((t) => t.wire).toList(),
+          'p_lat': lat,
+          'p_lon': lon,
         },
       );
     } on PostgrestException catch (e) {
@@ -160,6 +184,36 @@ class CommunityRepository {
       );
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Laedt ALLE eigenen Bewertungen (RLS: nur eigene Zeilen). Neueste zuerst.
+  /// Enthaelt place_ref + Sterne/Tags + (optional) gespeicherte Koordinaten.
+  Future<List<MyRatingEntry>> myRatings() async {
+    if (_session.currentUserId == null) return const [];
+    try {
+      final rows = await _client
+          .from('ratings')
+          .select('place_ref, stars, tags, lat, lon')
+          .order('updated_at', ascending: false);
+      return [
+        for (final row in rows)
+          MyRatingEntry(
+            placeRef: row['place_ref'] as String,
+            rating: MyRating(
+              stars: (row['stars'] as num).toInt(),
+              tags: {
+                for (final w
+                    in (row['tags'] as List?)?.cast<String>() ?? const [])
+                  ...PlaceTag.values.where((t) => t.wire == w),
+              },
+            ),
+            lat: (row['lat'] as num?)?.toDouble(),
+            lon: (row['lon'] as num?)?.toDouble(),
+          ),
+      ];
+    } catch (_) {
+      return const [];
     }
   }
 

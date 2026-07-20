@@ -107,34 +107,51 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
               TextButton(
                 onPressed: _busy
                     ? null
-                    : () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const AccountRegisterScreen(),
-                        ),
-                      ),
+                    : () async {
+                        final navigator = Navigator.of(context);
+                        final ok = await navigator.push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => const AccountRegisterScreen(),
+                          ),
+                        );
+                        // Bei erfolgreicher Registrierung besteht bereits eine
+                        // Session -> Login-Screen selbst schliessen, damit man
+                        // zum Aufrufer (Einstellungen/Karte) zurueckkehrt.
+                        if (ok == true && mounted) navigator.pop(true);
+                      },
                 child: const Text('Noch kein Konto? Registrieren'),
               ),
               TextButton(
                 onPressed: _busy
                     ? null
-                    : () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const AccountResetScreen(),
-                        ),
-                      ),
+                    : () async {
+                        final navigator = Navigator.of(context);
+                        final ok = await navigator.push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => const AccountResetScreen(),
+                          ),
+                        );
+                        // Nach erfolgreichem Reset ist man angemeldet ->
+                        // Login-Screen mit schliessen.
+                        if (ok == true && mounted) navigator.pop(true);
+                      },
                 child: const Text('Passwort vergessen?'),
               ),
               TextButton(
                 onPressed: _busy
                     ? null
-                    : () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => AccountRegisterScreen(
-                            initialEmail: _email.text.trim(),
-                            startAtOtp: true,
+                    : () async {
+                        final navigator = Navigator.of(context);
+                        final ok = await navigator.push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => AccountRegisterScreen(
+                              initialEmail: _email.text.trim(),
+                              startAtOtp: true,
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                        if (ok == true && mounted) navigator.pop(true);
+                      },
                 child: const Text('Bestätigungscode aus E-Mail eingeben'),
               ),
             ],

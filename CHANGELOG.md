@@ -3,6 +3,22 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.15.0] — 2026-07-20
+
+### Added
+- **„Meine Bewertungen"** im Menü: alle selbst bewerteten Wickelplätze auf einen
+  Blick, Bewertung direkt aus der Liste ändern, per Karten-Symbol zum Platz
+  zurückspringen. Bewertungen speichern dafür jetzt die Koordinaten mit, sodass
+  auch namenlose OpenStreetMap-Plätze wiederauffindbar bleiben (i-Hinweis bei
+  Einträgen ohne Namen).
+
+### Fixed
+- **Passwort-Reset:** Der Code bleibt nach einem fehlgeschlagenen Versuch (z.B.
+  neues = altes Passwort) gültig — kein „Token abgelaufen" mehr; nur das Passwort
+  muss erneut eingegeben werden.
+- **Nach Registrierung/Bestätigung** landet man nicht mehr fälschlich wieder auf
+  der Anmelde-Maske, sondern direkt eingeloggt zurück im Ausgangs-Screen.
+
 ## [0.14.1] — 2026-07-19
 
 ### Added

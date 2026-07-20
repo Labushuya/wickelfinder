@@ -9,6 +9,7 @@ import '../data/community_cache.dart';
 import '../data/community_repository.dart';
 import '../domain/admin_place_feedback.dart';
 import '../domain/place_stats.dart';
+import 'accumulated_places.dart';
 
 /// Stellt das [CommunityRepository] bereit — aber nur, wenn Supabase
 /// konfiguriert ist. Sonst null -> UI zeigt keine Community-Funktionen.
@@ -107,6 +108,28 @@ final adminPlaceFeedbackProvider =
       if (repo == null) return null;
       return repo.adminPlaceFeedback(placeRef);
     });
+
+/// Eine eigene Bewertung, angereichert um den (falls aufloesbaren) Platz.
+/// [place] ist null, wenn der Platz gerade nicht geladen ist (z. B. weit
+/// entfernter OSM-Pin); dann helfen die gespeicherten Koordinaten in [entry].
+class RatedPlace {
+  const RatedPlace({required this.entry, this.place});
+  final MyRatingEntry entry;
+  final ChangingPlace? place;
+}
+
+/// Alle eigenen Bewertungen, gejoint gegen die geladenen Pins (fuer Namen).
+/// Bewerten ist anonym -> kein Login-Gate; ohne Session einfach leer.
+final myRatingsProvider = FutureProvider<List<RatedPlace>>((ref) async {
+  ref.watch(authChangesProvider);
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return const [];
+  final byRef = ref.watch(accumulatedPlacesProvider).byRef;
+  final entries = await repo.myRatings();
+  return [
+    for (final e in entries) RatedPlace(entry: e, place: byRef[e.placeRef]),
+  ];
+});
 
 /// Nach einer Schreibaktion Cache + Ansichten aktualisieren (ohne Reload-Sturm).
 Future<void> refreshCommunityData(Ref ref) async {
