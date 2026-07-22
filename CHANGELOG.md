@@ -3,6 +3,19 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.16.0] — 2026-07-23
+
+### Changed
+- **„Nicht vorhanden" / „Doch vorhanden" zeigen jetzt deinen eigenen Zustand:**
+  Die Buttons markieren sichtbar „Gemeldet ✓" bzw. „Bestätigt ✓", wenn du bereits
+  abgestimmt hast; die Bestätigungsmeldung ist zustandsabhängig (neu / geändert /
+  bereits bestätigt). Es zählt weiterhin genau eine Stimme pro Person.
+
+### Fixed
+- **Melden und Bestätigen schließen sich pro Person gegenseitig aus:** Wer „nicht
+  vorhanden" meldet, dessen frühere „vorhanden"-Bestätigung wird entfernt (und
+  umgekehrt) — kein widersprüchlicher Doppel-Zustand mehr.
+
 ## [0.15.1] — 2026-07-22
 
 ### Fixed
