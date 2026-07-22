@@ -114,22 +114,7 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
         setState(() => _awaitingOtp = true);
       }
     } on AuthException catch (e) {
-      // Bekannte Faelle nutzerfreundlich uebersetzen, statt Roh-Codes zu zeigen.
-      final msg = e.message.toLowerCase();
-      String friendly;
-      if (msg.contains('sending confirmation') ||
-          msg.contains('error sending')) {
-        friendly =
-            'Die Bestätigungs-E-Mail konnte nicht versendet werden. '
-            'Bitte später erneut versuchen (Serverproblem beim Mailversand).';
-      } else if (msg.contains('already registered') ||
-          msg.contains('already been registered') ||
-          msg.contains('user already')) {
-        friendly = 'Diese E-Mail ist bereits registriert. Bitte melde dich an.';
-      } else {
-        friendly = e.message;
-      }
-      setState(() => _error = friendly);
+      setState(() => _error = germanAuthError(e));
     } catch (e, st) {
       // Nicht verschlucken: echten Fehler loggen + sichtbar melden.
       debugPrint('signUp/link failed: $e\n$st');
@@ -161,7 +146,7 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
       ref.invalidate(isAdminProvider);
       if (mounted) navigator.pop(true);
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = germanAuthError(e));
     } catch (_) {
       setState(() => _error = 'Bestätigung fehlgeschlagen.');
     } finally {
@@ -202,7 +187,7 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
       setState(() {
         _error = msg.contains('already') || msg.contains('confirmed')
             ? 'Dieses Konto ist bereits bestätigt. Bitte melde dich an.'
-            : e.message;
+            : germanAuthError(e);
       });
     } catch (e, st) {
       debugPrint('resend failed: $e\n$st');

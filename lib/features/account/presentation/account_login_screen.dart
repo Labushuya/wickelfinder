@@ -42,7 +42,7 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
       ref.invalidate(isAdminProvider);
       if (mounted) navigator.pop(true);
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = germanAuthError(e));
     } catch (_) {
       setState(() => _error = 'Anmeldung fehlgeschlagen.');
     } finally {
