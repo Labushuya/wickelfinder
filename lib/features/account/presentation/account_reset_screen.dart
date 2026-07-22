@@ -45,7 +45,7 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
       await repo.resetPassword(_email.text.trim());
       setState(() => _awaitingOtp = true);
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = germanAuthError(e));
     } catch (_) {
       setState(() => _error = 'Anforderung fehlgeschlagen.');
     } finally {
@@ -85,7 +85,7 @@ class _AccountResetScreenState extends ConsumerState<AccountResetScreen> {
       );
       navigator.pop(true);
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = germanAuthError(e));
     } catch (_) {
       setState(() => _error = 'Zurücksetzen fehlgeschlagen.');
     } finally {

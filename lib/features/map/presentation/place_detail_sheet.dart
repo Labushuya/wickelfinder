@@ -255,10 +255,15 @@ class PlaceDetailSheet extends ConsumerWidget {
         placeRef: place.placeRef,
         stars: input.stars,
         tags: input.tags,
+        // Koordinaten mitspeichern -> "Meine Bewertungen" kann spaeter
+        // zum Platz zurueckfuehren (auch namenlose OSM-Pins).
+        lat: place.location.latitude,
+        lon: place.location.longitude,
       );
-      // Eigene Bewertung + Aggregat neu laden -> Anzeige aktualisiert sich.
+      // Eigene Bewertung + Aggregat + Bewertungsliste neu laden.
       ref.invalidate(myRatingProvider(place.placeRef));
       ref.invalidate(statsProvider(place.placeRef));
+      ref.invalidate(myRatingsProvider);
       if (context.mounted) {
         showBottomToast(
           context,

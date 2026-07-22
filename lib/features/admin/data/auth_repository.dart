@@ -204,3 +204,53 @@ final currentAccountEmailProvider = Provider<String?>((ref) {
   if (u == null || u.isAnonymous) return null;
   return u.email;
 });
+
+/// Uebersetzt einen Auth-Fehler in eine nutzerfreundliche DEUTSCHE Meldung.
+/// Bevorzugt den maschinenlesbaren [AuthException.code]; faellt sonst auf
+/// bekannte englische Textbausteine und zuletzt auf eine generische Meldung.
+/// So sieht der Nutzer nie die englischen GoTrue-Rohtexte.
+String germanAuthError(Object e) {
+  if (e is! AuthException) {
+    return 'Aktion fehlgeschlagen. Bitte später erneut versuchen.';
+  }
+  final code = e.code?.toLowerCase() ?? '';
+  final msg = e.message.toLowerCase();
+
+  bool has(String needle) => code.contains(needle) || msg.contains(needle);
+
+  if (has('invalid_credentials') || has('invalid login')) {
+    return 'E-Mail oder Passwort ist falsch.';
+  }
+  if (has('email_not_confirmed') || has('not confirmed')) {
+    return 'Bitte bestätige zuerst deine E-Mail-Adresse.';
+  }
+  if (has('user_already_exists') ||
+      has('already registered') ||
+      has('already been registered') ||
+      has('user already')) {
+    return 'Diese E-Mail ist bereits registriert. Bitte melde dich an.';
+  }
+  if (has('same_password') || has('should be different')) {
+    return 'Das neue Passwort muss sich vom alten unterscheiden.';
+  }
+  if (has('weak_password') || has('at least 6') || has('should be at least')) {
+    return 'Das Passwort muss mindestens 6 Zeichen haben.';
+  }
+  if (has('otp_expired') || has('expired') || has('invalid otp')) {
+    return 'Der Code ist abgelaufen oder ungültig. Bitte fordere einen neuen an.';
+  }
+  if (has('rate') && has('limit') || has('over_email_send_rate')) {
+    return 'Zu viele Versuche. Bitte warte einen Moment und versuche es erneut.';
+  }
+  if (has('sending confirmation') || has('error sending')) {
+    return 'Die Bestätigungs-E-Mail konnte nicht versendet werden. '
+        'Bitte später erneut versuchen (Serverproblem beim Mailversand).';
+  }
+  if (has('validate email') || has('invalid format') || has('validation')) {
+    return 'Die E-Mail-Adresse ist ungültig.';
+  }
+  if (has('signup') && has('not allowed') || has('signup_disabled')) {
+    return 'Registrierung ist derzeit nicht möglich.';
+  }
+  return 'Aktion fehlgeschlagen. Bitte später erneut versuchen.';
+}

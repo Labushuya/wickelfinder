@@ -3,6 +3,18 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.15.1] — 2026-07-22
+
+### Fixed
+- **Alle Konto-Fehlermeldungen jetzt auf Deutsch** (Login, Registrierung,
+  Passwort-Reset, Admin-Login): z.B. „E-Mail oder Passwort ist falsch",
+  „Das neue Passwort muss sich vom alten unterscheiden" statt englischer
+  Roh-Texte.
+- **„Meine Bewertungen" bleibt nicht mehr leer:** Die Liste funktioniert jetzt
+  auch, wenn die Koordinaten-Spalten fehlen (Fallback ohne Karten-Sprung), und
+  frisch abgegebene Bewertungen erscheinen sofort. Neue Bewertungen speichern
+  ihre Koordinaten mit, damit der Rücksprung zum Platz funktioniert.
+
 ## [0.15.0] — 2026-07-20
 
 ### Added

@@ -189,6 +189,10 @@ class CommunityRepository {
 
   /// Laedt ALLE eigenen Bewertungen (RLS: nur eigene Zeilen). Neueste zuerst.
   /// Enthaelt place_ref + Sterne/Tags + (optional) gespeicherte Koordinaten.
+  ///
+  /// Robust gegen ein Backend OHNE Migration 0017: schlaegt die Abfrage mit
+  /// lat/lon fehl (Spalten fehlen), wird ohne Koordinaten erneut geladen — die
+  /// Liste funktioniert dann trotzdem, nur ohne Karten-Sprung.
   Future<List<MyRatingEntry>> myRatings() async {
     if (_session.currentUserId == null) return const [];
     try {
@@ -196,25 +200,37 @@ class CommunityRepository {
           .from('ratings')
           .select('place_ref, stars, tags, lat, lon')
           .order('updated_at', ascending: false);
-      return [
-        for (final row in rows)
-          MyRatingEntry(
-            placeRef: row['place_ref'] as String,
-            rating: MyRating(
-              stars: (row['stars'] as num).toInt(),
-              tags: {
-                for (final w
-                    in (row['tags'] as List?)?.cast<String>() ?? const [])
-                  ...PlaceTag.values.where((t) => t.wire == w),
-              },
-            ),
-            lat: (row['lat'] as num?)?.toDouble(),
-            lon: (row['lon'] as num?)?.toDouble(),
-          ),
-      ];
+      return [for (final row in rows) _entryFromRow(row, withCoords: true)];
+    } on PostgrestException {
+      // Wahrscheinlich fehlen lat/lon (Migration 0017 noch nicht ausgefuehrt)
+      // -> ohne Koordinaten erneut versuchen.
+      try {
+        final rows = await _client
+            .from('ratings')
+            .select('place_ref, stars, tags')
+            .order('updated_at', ascending: false);
+        return [for (final row in rows) _entryFromRow(row, withCoords: false)];
+      } catch (_) {
+        return const [];
+      }
     } catch (_) {
       return const [];
     }
+  }
+
+  MyRatingEntry _entryFromRow(dynamic row, {required bool withCoords}) {
+    return MyRatingEntry(
+      placeRef: row['place_ref'] as String,
+      rating: MyRating(
+        stars: (row['stars'] as num).toInt(),
+        tags: {
+          for (final w in (row['tags'] as List?)?.cast<String>() ?? const [])
+            ...PlaceTag.values.where((t) => t.wire == w),
+        },
+      ),
+      lat: withCoords ? (row['lat'] as num?)?.toDouble() : null,
+      lon: withCoords ? (row['lon'] as num?)?.toDouble() : null,
+    );
   }
 
   /// Laedt alle sichtbaren Community-Plaetze (aus community_places_public)

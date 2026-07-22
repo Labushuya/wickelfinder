@@ -68,7 +68,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
         setState(() => _error = 'Dieser Account hat keine Admin-Rechte.');
       }
     } on AuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = germanAuthError(e));
     } catch (_) {
       setState(() => _error = 'Anmeldung fehlgeschlagen.');
     } finally {
