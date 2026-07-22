@@ -8,6 +8,7 @@ import '../../map/domain/changing_place.dart';
 import '../data/community_cache.dart';
 import '../data/community_repository.dart';
 import '../domain/admin_place_feedback.dart';
+import '../domain/place_flag.dart';
 import '../domain/place_stats.dart';
 import 'accumulated_places.dart';
 
@@ -108,6 +109,28 @@ final adminPlaceFeedbackProvider =
       if (repo == null) return null;
       return repo.adminPlaceFeedback(placeRef);
     });
+
+/// Die EIGENE "nicht vorhanden"-Meldung fuer einen Platz (Grund oder null).
+final myFlagProvider = FutureProvider.family<FlagReason?, String>((
+  ref,
+  placeRef,
+) async {
+  ref.watch(authChangesProvider); // lazy anon-Session -> neu auswerten
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return null;
+  return repo.myFlag(placeRef);
+});
+
+/// True, wenn der Nutzer diesen Platz bereits als "vorhanden" bestaetigt hat.
+final myConfirmationProvider = FutureProvider.family<bool, String>((
+  ref,
+  placeRef,
+) async {
+  ref.watch(authChangesProvider);
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return false;
+  return repo.myConfirmation(placeRef);
+});
 
 /// Eine eigene Bewertung, angereichert um den (falls aufloesbaren) Platz.
 /// [place] ist null, wenn der Platz gerade nicht geladen ist (z. B. weit

@@ -187,6 +187,44 @@ class CommunityRepository {
     }
   }
 
+  /// Liest die EIGENE "nicht vorhanden"-Meldung fuer einen Platz (RLS: nur
+  /// eigene Zeile). Gibt den gewaehlten Grund zurueck, null wenn nicht gemeldet.
+  Future<FlagReason?> myFlag(String placeRef) async {
+    if (_session.currentUserId == null) return null;
+    try {
+      final rows = await _client
+          .from('flags')
+          .select('reason')
+          .eq('place_ref', placeRef)
+          .eq('user_id', _session.currentUserId!)
+          .limit(1);
+      if (rows.isEmpty) return null;
+      final wire = rows.first['reason'] as String?;
+      for (final r in FlagReason.values) {
+        if (r.wire == wire) return r;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// True, wenn der Nutzer diesen Platz bereits als "vorhanden" bestaetigt hat.
+  Future<bool> myConfirmation(String placeRef) async {
+    if (_session.currentUserId == null) return false;
+    try {
+      final rows = await _client
+          .from('confirmations')
+          .select('place_ref')
+          .eq('place_ref', placeRef)
+          .eq('user_id', _session.currentUserId!)
+          .limit(1);
+      return rows.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Laedt ALLE eigenen Bewertungen (RLS: nur eigene Zeilen). Neueste zuerst.
   /// Enthaelt place_ref + Sterne/Tags + (optional) gespeicherte Koordinaten.
   ///

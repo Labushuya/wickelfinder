@@ -33,6 +33,10 @@ class PlaceDetailSheet extends ConsumerWidget {
     final statsAsync = ref.watch(statsProvider(place.placeRef));
     final stats = statsAsync.valueOrNull ?? PlaceStats.empty(place.placeRef);
     final myRating = ref.watch(myRatingProvider(place.placeRef)).valueOrNull;
+    // Eigener Melde-/Bestaetigungs-Zustand (fuer stateful Buttons + Toasts).
+    final myFlag = ref.watch(myFlagProvider(place.placeRef)).valueOrNull;
+    final myConfirmed =
+        ref.watch(myConfirmationProvider(place.placeRef)).valueOrNull ?? false;
 
     // Bearbeiten/Loeschen anbieten, wenn eigener Community-Pin ODER Admin.
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
@@ -131,25 +135,59 @@ class PlaceDetailSheet extends ConsumerWidget {
                     ),
                   ),
                   // Existenz-Feedback: fuer JEDEN sichtbar (anonym, kein Konto).
+                  // Buttons spiegeln den EIGENEN Zustand (bereits gemeldet /
+                  // bestaetigt), damit klar ist, dass eine Stimme pro Person zaehlt.
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          icon: const Icon(Icons.check_circle_outline),
-                          label: const Text('Doch vorhanden'),
-                          onPressed: () => _confirmPresent(context, ref, repo),
+                          icon: Icon(
+                            myConfirmed
+                                ? Icons.check_circle
+                                : Icons.check_circle_outline,
+                          ),
+                          label: Text(
+                            myConfirmed ? 'Bestätigt ✓' : 'Doch vorhanden',
+                          ),
+                          style: myConfirmed
+                              ? OutlinedButton.styleFrom(
+                                  foregroundColor: theme.colorScheme.primary,
+                                  backgroundColor: theme
+                                      .colorScheme
+                                      .primaryContainer
+                                      .withValues(alpha: 0.3),
+                                )
+                              : null,
+                          onPressed: () => _confirmPresent(
+                            context,
+                            ref,
+                            repo,
+                            alreadyConfirmed: myConfirmed,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton.icon(
-                          icon: const Icon(Icons.report_gmailerrorred_outlined),
-                          label: const Text('Nicht vorhanden'),
+                          icon: Icon(
+                            myFlag != null
+                                ? Icons.report
+                                : Icons.report_gmailerrorred_outlined,
+                          ),
+                          label: Text(
+                            myFlag != null ? 'Gemeldet ✓' : 'Nicht vorhanden',
+                          ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: theme.colorScheme.error,
+                            backgroundColor: myFlag != null
+                                ? theme.colorScheme.errorContainer.withValues(
+                                    alpha: 0.3,
+                                  )
+                                : null,
                           ),
-                          onPressed: () => _flag(context, ref, repo),
+                          onPressed: () =>
+                              _flag(context, ref, repo, current: myFlag),
                         ),
                       ),
                     ],
@@ -283,11 +321,14 @@ class PlaceDetailSheet extends ConsumerWidget {
   }
 
   /// "Nicht vorhanden melden": erst Grund waehlen, dann Rueckfrage, dann senden.
+  /// [current] = bereits abgegebener Grund (null wenn noch nicht gemeldet) ->
+  /// steuert Rueckfrage- und Bestaetigungstext.
   Future<void> _flag(
     BuildContext context,
     WidgetRef ref,
-    CommunityRepository repo,
-  ) async {
+    CommunityRepository repo, {
+    FlagReason? current,
+  }) async {
     // 1. Grund waehlen (kein 'other' — bewusst weggelassen).
     final reason = await showModalBottomSheet<FlagReason>(
       context: context,
@@ -321,10 +362,12 @@ class PlaceDetailSheet extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Meldung absenden?'),
+        title: Text(current == null ? 'Meldung absenden?' : 'Meldung ändern?'),
         content: Text(
-          'Du meldest „${place.name ?? 'diesen Wickelplatz'}" als: '
-          '${reason.label}.',
+          current == null
+              ? 'Du meldest „${place.name ?? 'diesen Wickelplatz'}" als: '
+                    '${reason.label}.'
+              : 'Du änderst deine Meldung zu: ${reason.label}.',
         ),
         actions: [
           TextButton(
@@ -333,20 +376,27 @@ class PlaceDetailSheet extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Melden'),
+            child: Text(current == null ? 'Melden' : 'Ändern'),
           ),
         ],
       ),
     );
     if (ok != true) return;
 
-    // 3. Senden + Refresh.
+    // 3. Senden + Refresh (eigener Zustand + Aggregat neu laden).
     try {
       await repo.submitFlag(placeRef: place.placeRef, reason: reason);
       ref.invalidate(statsProvider(place.placeRef));
+      ref.invalidate(myFlagProvider(place.placeRef));
+      ref.invalidate(myConfirmationProvider(place.placeRef));
       await refreshCommunityDataFromWidget(ref);
       if (context.mounted) {
-        showBottomToast(context, 'Danke, deine Meldung wurde gespeichert.');
+        showBottomToast(
+          context,
+          current == null
+              ? 'Danke! Als „${reason.label}" gemeldet.'
+              : 'Deine Meldung wurde auf „${reason.label}" geändert.',
+        );
       }
     } on CommunityException catch (e) {
       if (context.mounted) showBottomToast(context, e.userMessage);
@@ -360,15 +410,23 @@ class PlaceDetailSheet extends ConsumerWidget {
     }
   }
 
-  /// "Doch vorhanden" bestaetigen (direkt, ohne Rueckfrage).
+  /// "Doch vorhanden" bestaetigen. [alreadyConfirmed] steuert den Toast.
   Future<void> _confirmPresent(
     BuildContext context,
     WidgetRef ref,
-    CommunityRepository repo,
-  ) async {
+    CommunityRepository repo, {
+    bool alreadyConfirmed = false,
+  }) async {
+    if (alreadyConfirmed) {
+      // Schon bestaetigt -> keine erneute Aktion, nur Hinweis.
+      showBottomToast(context, 'Du hast diesen Platz bereits bestätigt.');
+      return;
+    }
     try {
       await repo.confirmPresent(placeRef: place.placeRef);
       ref.invalidate(statsProvider(place.placeRef));
+      ref.invalidate(myConfirmationProvider(place.placeRef));
+      ref.invalidate(myFlagProvider(place.placeRef));
       await refreshCommunityDataFromWidget(ref);
       if (context.mounted) {
         showBottomToast(context, 'Danke, als vorhanden bestätigt.');
