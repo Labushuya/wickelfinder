@@ -110,11 +110,11 @@ class _AdminSection extends ConsumerWidget {
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
     if (!isAdmin) return const SizedBox.shrink();
 
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionHeader('Verwaltung'),
-        const ListTile(
+        _SectionHeader('Verwaltung'),
+        ListTile(
           leading: Icon(Icons.verified_user, color: Colors.green),
           title: Text('Als Admin angemeldet'),
           subtitle: Text(
