@@ -1,5 +1,6 @@
+import 'dart:typed_data';
+
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -502,8 +503,8 @@ class CommunityRepository {
   }
 
   /// Komprimiert ein gewaehltes Bild auf ~200 KB / ~1280px, JPEG, OHNE EXIF.
-  Future<List<int>> _compressForUpload(XFile picked) async {
-    Future<List<int>?> attempt(int quality) async {
+  Future<Uint8List> _compressForUpload(XFile picked) async {
+    Future<Uint8List?> attempt(int quality) async {
       final out = await FlutterImageCompress.compressWithFile(
         picked.path,
         minWidth: 1280,
