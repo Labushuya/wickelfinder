@@ -61,7 +61,7 @@ technisch deine IP-Adresse an diese Server übermittelt. Es gelten die
 
 ## 5a. Fotos (optional)
 
-Angemeldete Nutzer können pro Wickelplatz ein Foto hochladen. Wichtig:
+Angemeldete Nutzer können pro Wickelplatz bis zu 3 Fotos hochladen. Wichtig:
 
 - **Metadaten werden entfernt:** Vor dem Upload werden Bild-Metadaten (u. a.
   GPS-Standort, Gerät, Aufnahmezeit) beim Komprimieren **verworfen**. Es wird nur
@@ -71,7 +71,7 @@ Angemeldete Nutzer können pro Wickelplatz ein Foto hochladen. Wichtig:
 - **Verantwortung für den Inhalt:** Lade keine Fotos hoch, die Personen erkennbar
   zeigen oder Rechte Dritter verletzen. Jedes Foto kann von anderen **gemeldet**
   werden und wird dann geprüft.
-- **Löschung:** Du kannst dein Foto jederzeit selbst entfernen. Bei Konto-Löschung
+- **Löschung:** Du kannst deine Fotos jederzeit selbst entfernen. Bei Konto-Löschung
   werden auch deine hochgeladenen Bilddateien vom Speicher gelöscht.
 - **Speicherort:** Fotos liegen im Speicher unseres Auftragsverarbeiters Supabase
   (siehe Abschnitt 6), in einem nicht-öffentlichen Bereich; der Zugriff erfolgt

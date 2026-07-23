@@ -3,6 +3,13 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.18.0] — 2026-07-23
+
+### Changed
+- **Bis zu 3 Fotos pro Platz und Nutzer** (statt bisher 1). Jedes neue Foto
+  (auch weitere) wartet auf Admin-Freigabe. Eigene Fotos lassen sich jederzeit
+  (vor und nach der Freigabe) im Vollbild einzeln entfernen.
+
 ## [0.17.2] — 2026-07-23
 
 ### Changed

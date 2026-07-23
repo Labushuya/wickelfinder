@@ -54,6 +54,7 @@ class CommunityException implements Exception {
     'self_rating' => 'Eigene Plätze können nicht bewertet werden.',
     'self_flag' => 'Eigene Plätze können nicht gemeldet werden.',
     'photo_exists' => 'Du hast für diesen Platz bereits ein Foto.',
+    'photo_limit' => 'Du hast für diesen Platz bereits 3 Fotos.',
     'photo_rate_limit' => 'Zu viele Fotos in kurzer Zeit. Bitte später erneut.',
     'report_rate_limit' =>
       'Zu viele Meldungen in kurzer Zeit. Bitte später erneut.',
@@ -555,14 +556,14 @@ class CommunityRepository {
     return result;
   }
 
-  /// Das eigene Foto zu einem Platz (null, wenn keins).
-  Future<PlacePhoto?> myPhoto(String placeRef) async {
-    if (_client.auth.currentUser == null) return null;
+  /// Die EIGENEN Fotos zu einem Platz (bis zu 3), leer wenn keine.
+  Future<List<PlacePhoto>> myPhotos(String placeRef) async {
+    if (_client.auth.currentUser == null) return const [];
     final photos = await photosFor([placeRef]);
-    for (final p in photos) {
-      if (p.isMine) return p;
-    }
-    return null;
+    return [
+      for (final p in photos)
+        if (p.isMine) p,
+    ];
   }
 
   /// Loescht das eigene Foto: erst das Storage-Objekt, dann die DB-Zeile
@@ -667,6 +668,7 @@ class CommunityRepository {
       'self_rating',
       'self_flag',
       'photo_exists',
+      'photo_limit',
       'photo_missing',
       'bad_kind',
       'bad_path',

@@ -41,7 +41,8 @@ class PlaceDetailSheet extends ConsumerWidget {
     final myFlag = ref.watch(myFlagProvider(place.placeRef)).valueOrNull;
     final myConfirmed =
         ref.watch(myConfirmationProvider(place.placeRef)).valueOrNull ?? false;
-    final myPhoto = ref.watch(myPhotoProvider(place.placeRef)).valueOrNull;
+    final myPhotos =
+        ref.watch(myPhotosProvider(place.placeRef)).valueOrNull ?? const [];
 
     // Bearbeiten/Loeschen anbieten, wenn eigener Community-Pin ODER Admin.
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
@@ -198,21 +199,21 @@ class PlaceDetailSheet extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // Foto: hinzufuegen (nur mit Konto) bzw. eigenes verwalten.
+                  // Foto: hinzufuegen (nur mit Konto), bis zu 3 pro Nutzer.
+                  // Loeschen/Melden je Foto laeuft ueber das Vollbild im Strip.
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      icon: Icon(
-                        myPhoto == null
-                            ? Icons.add_a_photo_outlined
-                            : Icons.photo_camera_outlined,
-                      ),
+                      icon: const Icon(Icons.add_a_photo_outlined),
                       label: Text(
-                        myPhoto == null ? 'Foto hinzufügen' : 'Mein Foto',
+                        myPhotos.length >= 3
+                            ? 'Fotos: 3/3'
+                            : 'Foto hinzufügen (${myPhotos.length}/3)',
                       ),
-                      onPressed: () =>
-                          _photoAction(context, ref, repo, myPhoto),
+                      onPressed: myPhotos.length >= 3
+                          ? null
+                          : () => _addPhoto(context, ref, repo),
                     ),
                   ),
                   if (canManage) ...[
@@ -466,66 +467,22 @@ class PlaceDetailSheet extends ConsumerWidget {
     }
   }
 
-  /// Foto-Aktion: ohne eigenes Foto -> hochladen (konto-pflichtig); mit eigenem
-  /// Foto -> Aktionen (ersetzen/entfernen).
-  Future<void> _photoAction(
+  /// Foto hinzufuegen (konto-pflichtig, bis zu 3 pro Platz). Loeschen/Melden
+  /// eines EINZELNEN Fotos laeuft ueber das Vollbild (_PhotoViewer).
+  Future<void> _addPhoto(
     BuildContext context,
     WidgetRef ref,
     CommunityRepository repo,
-    PlacePhoto? mine,
   ) async {
-    if (mine == null) {
-      // Upload braucht ein echtes Konto (nicht anonym).
-      if (!ref.read(isLoggedInProvider)) {
-        await promptLogin(
-          context,
-          reason:
-              'Zum Hinzufügen eines Fotos brauchst du ein kostenloses Konto.',
-        );
-        return;
-      }
-      await _uploadPhoto(context, ref, repo);
+    // Upload braucht ein echtes Konto (nicht anonym).
+    if (!ref.read(isLoggedInProvider)) {
+      await promptLogin(
+        context,
+        reason: 'Zum Hinzufügen eines Fotos brauchst du ein kostenloses Konto.',
+      );
       return;
     }
-    // Eigenes Foto -> Verwaltungs-Sheet.
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (mine.isPending)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Text(
-                  'Dein Foto wartet auf Freigabe und ist nur für dich sichtbar.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
-                ),
-              ),
-            ListTile(
-              leading: const Icon(Icons.swap_horiz),
-              title: const Text('Foto ersetzen'),
-              onTap: () => Navigator.pop(ctx, 'replace'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: const Text('Foto entfernen'),
-              onTap: () => Navigator.pop(ctx, 'delete'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (!context.mounted) return;
-    if (action == 'delete') {
-      await _deletePhoto(context, ref, repo, mine);
-    } else if (action == 'replace') {
-      // Erst entfernen (1-pro-Platz-Cap), dann neu hochladen.
-      await _deletePhoto(context, ref, repo, mine, silent: true);
-      if (context.mounted) await _uploadPhoto(context, ref, repo);
-    }
+    if (context.mounted) await _uploadPhoto(context, ref, repo);
   }
 
   Future<void> _uploadPhoto(
@@ -579,26 +536,6 @@ class PlaceDetailSheet extends ConsumerWidget {
     } catch (_) {
       if (context.mounted) {
         showBottomToast(context, 'Upload fehlgeschlagen. Bitte später erneut.');
-      }
-    }
-  }
-
-  Future<void> _deletePhoto(
-    BuildContext context,
-    WidgetRef ref,
-    CommunityRepository repo,
-    PlacePhoto photo, {
-    bool silent = false,
-  }) async {
-    try {
-      await repo.deleteMyPhoto(photo);
-      refreshPhotos(ref, place.placeRef);
-      if (!silent && context.mounted) {
-        showBottomToast(context, 'Foto entfernt.');
-      }
-    } catch (_) {
-      if (context.mounted) {
-        showBottomToast(context, 'Entfernen fehlgeschlagen.');
       }
     }
   }
@@ -1244,6 +1181,12 @@ class _PhotoViewer extends ConsumerWidget {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         actions: [
+          if (photo.isMine)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Mein Foto entfernen',
+              onPressed: () => _delete(context, ref),
+            ),
           IconButton(
             icon: const Icon(Icons.flag_outlined),
             tooltip: 'Foto melden',
@@ -1252,16 +1195,66 @@ class _PhotoViewer extends ConsumerWidget {
         ],
       ),
       body: Center(
-        child: InteractiveViewer(
-          child: CachedNetworkImage(
-            imageUrl: photo.signedUrl,
-            fit: BoxFit.contain,
-            errorWidget: (_, __, ___) =>
-                const Icon(Icons.broken_image_outlined, color: Colors.white),
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (photo.isPending)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Wartet auf Freigabe – nur für dich sichtbar.',
+                  style: TextStyle(color: Colors.amber, fontSize: 13),
+                ),
+              ),
+            Flexible(
+              child: InteractiveViewer(
+                child: CachedNetworkImage(
+                  imageUrl: photo.signedUrl,
+                  fit: BoxFit.contain,
+                  errorWidget: (_, __, ___) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(communityRepositoryProvider);
+    if (repo == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Foto entfernen?'),
+        content: const Text('Dein Foto wird endgültig gelöscht.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Entfernen'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final navigator = Navigator.of(context);
+    try {
+      await repo.deleteMyPhoto(photo);
+      refreshPhotos(ref, placeRef);
+      navigator.pop(); // Vollbild schliessen
+      if (context.mounted) showBottomToast(context, 'Foto entfernt.');
+    } catch (_) {
+      if (context.mounted)
+        showBottomToast(context, 'Entfernen fehlgeschlagen.');
+    }
   }
 
   Future<void> _report(BuildContext context, WidgetRef ref) async {
