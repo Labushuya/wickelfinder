@@ -3,6 +3,17 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.17.2] — 2026-07-23
+
+### Changed
+- **Nur noch EIN Login für alle.** Der separate Admin-Login entfällt: Man meldet
+  sich ganz normal an, und Admin-Funktionen erscheinen automatisch, wenn das
+  Konto Admin-Rechte hat. Weniger Verwirrung.
+- Der Login merkt sich jetzt „Angemeldet bleiben" (für alle Konten) und füllt
+  gespeicherte Zugangsdaten vor.
+- Die „Verwaltung"-Sektion in den Einstellungen zeigt nur noch den Admin-Status
+  an (Ab-/Anmelden läuft über das Konto-Menü oben rechts).
+
 ## [0.17.1] — 2026-07-23
 
 ### Changed
