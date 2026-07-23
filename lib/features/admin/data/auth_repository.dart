@@ -29,13 +29,9 @@ class AuthRepository {
 
   Stream<AuthState> get changes => _client.auth.onAuthStateChange;
 
-  // --- Login (Admin wie normales Konto — identischer Passwort-Login) --------
-  Future<void> signInAdmin(String email, String password) =>
-      _client.auth.signInWithPassword(email: email, password: password);
-
-  /// Alias fuer normale Konten (semantisch klarer; gleiche Wirkung).
+  // --- Login (ein Login fuer alle; Admin = normales Konto mit is_admin) ------
   Future<void> signIn(String email, String password) =>
-      signInAdmin(email, password);
+      _client.auth.signInWithPassword(email: email, password: password);
 
   // --- Registrierung + Identity-Linking + Passwort-Reset --------------------
 
@@ -80,12 +76,12 @@ class AuthRepository {
       _client.auth.resetPasswordForEmail(email);
 
   /// Login + optional Zugangsdaten verschluesselt speichern (Auto-Login).
-  Future<void> signInAdminRemember(
+  Future<void> signInRemember(
     String email,
     String password, {
     required bool remember,
   }) async {
-    await signInAdmin(email, password);
+    await signIn(email, password);
     try {
       if (remember) {
         await _storage.write(key: _kEmail, value: email);
@@ -119,7 +115,7 @@ class AuthRepository {
       await _storage.delete(key: _kPassword);
       await _storage.delete(key: _kAutoLogin);
     } catch (_) {
-      // Ignorieren (siehe signInAdminRemember).
+      // Ignorieren (siehe signInRemember).
     }
   }
 
@@ -136,7 +132,7 @@ class AuthRepository {
     final creds = await savedCredentials();
     if (creds == null) return;
     try {
-      await signInAdmin(creds.email, creds.password);
+      await signIn(creds.email, creds.password);
     } catch (_) {
       // Ungueltig/geaendert -> Auto-Login abschalten, Felder bleiben aber.
       try {

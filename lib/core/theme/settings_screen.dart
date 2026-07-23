@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/admin/data/auth_repository.dart';
-import '../../features/admin/presentation/admin_login_screen.dart';
 import '../../features/privacy/data/account_repository.dart';
 import '../../features/privacy/presentation/privacy_screen.dart';
 import 'theme_controller.dart';
@@ -100,40 +99,29 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Admin-Bereich: Login (E-Mail/Passwort) bzw. Status + Logout.
+/// Admin-Status (nur Anzeige). Es gibt keinen separaten Admin-Login mehr —
+/// Admin-Rechte erkennt der Server (is_admin) am ganz normalen Login. Fuer
+/// Nicht-Admins wird nichts angezeigt; An-/Abmelden laeuft ueber das Konto-Menue.
 class _AdminSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repo = ref.watch(authRepositoryProvider);
     if (repo == null) return const SizedBox.shrink();
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
+    if (!isAdmin) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionHeader('Verwaltung'),
-        if (isAdmin)
-          ListTile(
-            leading: const Icon(Icons.verified_user, color: Colors.green),
-            title: const Text('Als Admin angemeldet'),
-            subtitle: const Text('Du kannst alle Pins bearbeiten und löschen.'),
-            trailing: TextButton(
-              onPressed: () async {
-                await repo.signOut();
-                ref.invalidate(isAdminProvider);
-              },
-              child: const Text('Abmelden'),
-            ),
-          )
-        else
-          ListTile(
-            leading: const Icon(Icons.admin_panel_settings_outlined),
-            title: const Text('Admin-Anmeldung'),
-            subtitle: const Text('Für Betreiber: alle Pins verwalten.'),
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
+        const ListTile(
+          leading: Icon(Icons.verified_user, color: Colors.green),
+          title: Text('Als Admin angemeldet'),
+          subtitle: Text(
+            'Du kannst alle Pins bearbeiten/löschen und Fotos freigeben. '
+            'Abmelden über das Konto-Menü (oben rechts).',
           ),
+        ),
       ],
     );
   }
