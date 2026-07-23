@@ -14,13 +14,12 @@ import '../../../core/theme/theme_controller.dart';
 import '../../../core/widgets/bottom_toast.dart';
 import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
-import '../../community/presentation/all_places_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/my_places_screen.dart';
 import '../../community/presentation/my_ratings_screen.dart';
 import '../../community/presentation/nearby_places_screen.dart';
-import '../../community/presentation/photo_review_screen.dart';
 import '../../admin/data/auth_repository.dart';
+import '../../admin/presentation/admin_dashboard_screen.dart';
 import '../../account/presentation/account_login_screen.dart';
 import '../../account/presentation/login_prompt.dart';
 import '../../search/presentation/address_search_bar.dart';
@@ -277,17 +276,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
             MaterialPageRoute(builder: (_) => const MyPlacesScreen()),
           );
           if (sel != null) _goTo(sel.location);
-        } else if (v == 'all_pins') {
+        } else if (v == 'admin') {
+          // Dashboard kann eine Pin-Auswahl (aus „Alle Pins") zurueckgeben.
           final sel = await Navigator.of(context).push<ChangingPlace>(
-            MaterialPageRoute(builder: (_) => const AllPlacesScreen()),
+            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
           );
           if (sel != null) _goTo(sel.location);
-        } else if (v == 'photo_review') {
-          unawaited(
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PhotoReviewScreen()),
-            ),
-          );
         } else if (v == 'nearby') {
           final sel = await Navigator.of(context).push<ChangingPlace>(
             MaterialPageRoute(builder: (_) => const NearbyPlacesScreen()),
@@ -347,23 +341,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
           ),
         if (hasBackend && isAdmin)
           const PopupMenuItem(
-            value: 'all_pins',
+            value: 'admin',
             child: Row(
               children: [
-                Icon(Icons.list_alt, size: 20),
+                Icon(Icons.admin_panel_settings_outlined, size: 20),
                 SizedBox(width: 10),
-                Text('Alle Pins [Admin]'),
-              ],
-            ),
-          ),
-        if (hasBackend && isAdmin)
-          const PopupMenuItem(
-            value: 'photo_review',
-            child: Row(
-              children: [
-                Icon(Icons.photo_library_outlined, size: 20),
-                SizedBox(width: 10),
-                Text('Fotos prüfen [Admin]'),
+                Text('Verwaltung [Admin]'),
               ],
             ),
           ),

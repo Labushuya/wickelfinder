@@ -3,6 +3,27 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.19.0] — 2026-07-24
+
+### Added
+- **Dediziertes Admin-Dashboard** („Verwaltung [Admin]"): eine zentrale Ansicht
+  mit Übersicht, in der wartende Fotos und offene Meldungen **hervorgehoben**
+  werden (Badge/Farbe nur, wenn wirklich etwas zu tun ist — sonst „nichts zu
+  tun"). Von dort erreichbar: Fotos prüfen, Meldungen, alle Pins.
+- **Meldungen sind jetzt bearbeitbar:** gemeldete Fotos lassen sich prüfen und
+  **löschen** (Foto + Meldung weg) oder die **Meldung verwerfen** (Foto bleibt).
+  Bisher gab es dafür gar keine Oberfläche.
+
+### Changed
+- Die früheren einzelnen Admin-Menüeinträge („Alle Pins", „Fotos prüfen")
+  wurden zu **einem** Eintrag „Verwaltung [Admin]" zusammengefasst. Zweiter
+  Zugang: Einstellungen → Verwaltung → „Verwaltung öffnen".
+
+### Hinweise
+- Neue Migration **`0023_admin_moderation_actions.sql`** muss im Supabase
+  SQL-Editor ausgeführt werden (fügt die Admin-Aktionen zum Löschen gemeldeter
+  Fotos und Verwerfen von Meldungen hinzu).
+
 ## [0.18.0] — 2026-07-23
 
 ### Changed
