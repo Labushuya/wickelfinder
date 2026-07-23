@@ -263,11 +263,15 @@ class _MapScreenState extends ConsumerState<MapScreen>
         if (v == 'update') {
           unawaited(UpdateSheet.checkAndShow(context, ref, manual: true));
         } else if (v == 'account') {
-          unawaited(
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AccountLoginScreen()),
-            ),
-          );
+          if (ref.read(isLoggedInProvider)) {
+            await _showAccountSheet();
+          } else {
+            unawaited(
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AccountLoginScreen()),
+              ),
+            );
+          }
         } else if (v == 'my_pins') {
           final sel = await Navigator.of(context).push<ChangingPlace>(
             MaterialPageRoute(builder: (_) => const MyPlacesScreen()),
@@ -311,6 +315,22 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 Icon(Icons.login, size: 20),
                 SizedBox(width: 10),
                 Text('Anmelden / Registrieren'),
+              ],
+            ),
+          ),
+        if (hasBackend && isLoggedIn)
+          PopupMenuItem(
+            value: 'account',
+            child: Row(
+              children: [
+                const Icon(Icons.account_circle_outlined, size: 20),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    ref.watch(currentAccountEmailProvider) ?? 'Konto',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -627,6 +647,39 @@ class _MapScreenState extends ConsumerState<MapScreen>
   /// Hinweis + CTA zum Anmelden/Registrieren, wenn eine konto-pflichtige
   /// Aktion ohne Konto versucht wird. Nutzt den zentralen Helfer.
   Future<void> _promptLogin() => promptLogin(context);
+
+  /// Konto-Verwaltung fuer eingeloggte Nutzer (E-Mail anzeigen + Abmelden).
+  Future<void> _showAccountSheet() async {
+    final repo = ref.read(authRepositoryProvider);
+    if (repo == null) return;
+    final email = ref.read(currentAccountEmailProvider);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.account_circle_outlined),
+              title: const Text('Angemeldet'),
+              subtitle: Text(email ?? '—'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Abmelden'),
+              onTap: () async {
+                await repo.signOut();
+                ref.invalidate(isAdminProvider);
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Kleiner Hell-/Dunkel-Schnellumschalter (Sonne/Mond) neben der Suchleiste.

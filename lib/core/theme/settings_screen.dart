@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/account/presentation/account_login_screen.dart';
 import '../../features/admin/data/auth_repository.dart';
 import '../../features/admin/presentation/admin_login_screen.dart';
 import '../../features/privacy/data/account_repository.dart';
@@ -53,8 +52,6 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const Divider(),
-          _AccountSection(),
-          const Divider(),
           _AdminSection(),
           const Divider(),
           _MyDataSection(),
@@ -99,49 +96,6 @@ class _SectionHeader extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-    );
-  }
-}
-
-/// Konto-Bereich fuer normale Nutzer: Anmelden/Registrieren bzw. angemeldet-
-/// als + Abmelden. Ein Konto schaltet Pins-Erstellen/-Verwalten frei.
-class _AccountSection extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.watch(authRepositoryProvider);
-    if (repo == null) return const SizedBox.shrink();
-    final email = ref.watch(currentAccountEmailProvider);
-    final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
-    // Admin wird in der Verwaltungs-Sektion behandelt -> hier nicht doppeln.
-    if (isAdmin) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _SectionHeader('Konto'),
-        if (email != null)
-          ListTile(
-            leading: const Icon(Icons.account_circle_outlined),
-            title: const Text('Angemeldet'),
-            subtitle: Text(email),
-            trailing: TextButton(
-              onPressed: () async {
-                await repo.signOut();
-                ref.invalidate(isAdminProvider);
-              },
-              child: const Text('Abmelden'),
-            ),
-          )
-        else
-          ListTile(
-            leading: const Icon(Icons.login),
-            title: const Text('Anmelden / Registrieren'),
-            subtitle: const Text('Fürs Hinzufügen und Verwalten eigener Pins.'),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AccountLoginScreen()),
-            ),
-          ),
-      ],
     );
   }
 }
