@@ -3,6 +3,14 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.17.1] — 2026-07-23
+
+### Changed
+- **Konto ist jetzt vollständig ins 3-Punkt-Menü gewandert:** oben erscheint
+  „Anmelden / Registrieren" (abgemeldet) bzw. deine E-Mail → Abmelden
+  (angemeldet). Der Konto-Bereich wurde dafür aus den Einstellungen entfernt
+  (kein Doppel mehr).
+
 ## [0.17.0] — 2026-07-23
 
 ### Added
