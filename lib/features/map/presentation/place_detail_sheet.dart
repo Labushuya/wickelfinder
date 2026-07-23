@@ -1245,6 +1245,7 @@ class _PhotoViewer extends ConsumerWidget {
       ),
     );
     if (ok != true) return;
+    if (!context.mounted) return;
     final navigator = Navigator.of(context);
     try {
       await repo.deleteMyPhoto(photo);
@@ -1252,8 +1253,9 @@ class _PhotoViewer extends ConsumerWidget {
       navigator.pop(); // Vollbild schliessen
       if (context.mounted) showBottomToast(context, 'Foto entfernt.');
     } catch (_) {
-      if (context.mounted)
+      if (context.mounted) {
         showBottomToast(context, 'Entfernen fehlgeschlagen.');
+      }
     }
   }
 
