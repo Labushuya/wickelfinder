@@ -518,6 +518,7 @@ class PlaceDetailSheet extends ConsumerWidget {
         ),
       ),
     );
+    if (!context.mounted) return;
     if (action == 'delete') {
       await _deletePhoto(context, ref, repo, mine);
     } else if (action == 'replace') {
