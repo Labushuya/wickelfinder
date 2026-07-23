@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/admin/data/auth_repository.dart';
+import '../../features/admin/presentation/admin_dashboard_screen.dart';
 import '../../features/privacy/data/account_repository.dart';
 import '../../features/privacy/presentation/privacy_screen.dart';
 import 'theme_controller.dart';
@@ -110,16 +111,27 @@ class _AdminSection extends ConsumerWidget {
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
     if (!isAdmin) return const SizedBox.shrink();
 
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionHeader('Verwaltung'),
-        ListTile(
+        const _SectionHeader('Verwaltung'),
+        const ListTile(
           leading: Icon(Icons.verified_user, color: Colors.green),
           title: Text('Als Admin angemeldet'),
           subtitle: Text(
             'Du kannst alle Pins bearbeiten/löschen und Fotos freigeben. '
             'Abmelden über das Konto-Menü (oben rechts).',
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.admin_panel_settings_outlined),
+          title: const Text('Verwaltung öffnen'),
+          subtitle: const Text(
+            'Übersicht, Fotos prüfen, Meldungen, alle Pins.',
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
           ),
         ),
       ],

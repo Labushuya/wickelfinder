@@ -9,6 +9,7 @@ import '../data/community_cache.dart';
 import '../data/community_repository.dart';
 import '../domain/admin_place_feedback.dart';
 import '../domain/moderation_counts.dart';
+import '../domain/open_report.dart';
 import '../domain/pending_photo.dart';
 import '../domain/place_flag.dart';
 import '../domain/place_photo.dart';
@@ -209,10 +210,25 @@ final adminModerationCountsProvider =
       return repo.adminModerationCounts();
     });
 
+/// Offene Inhaltsmeldungen fuer die Admin-Pruefung. Leer ohne Adminrecht.
+final adminOpenReportsProvider = FutureProvider<List<OpenReport>>((ref) async {
+  ref.watch(authChangesProvider);
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return const [];
+  return repo.adminOpenReports();
+});
+
 /// Foto-bezogene Ansichten nach einer Aktion aktualisieren.
 void refreshPhotos(WidgetRef ref, String placeRef) {
   ref.invalidate(photosProvider(placeRef));
   ref.invalidate(myPhotosProvider(placeRef));
   ref.invalidate(adminPendingPhotosProvider);
+  ref.invalidate(adminModerationCountsProvider);
+}
+
+/// Alle Admin-Moderations-Ansichten neu laden (nach Freigabe/Löschen/Verwerfen).
+void refreshModeration(WidgetRef ref) {
+  ref.invalidate(adminPendingPhotosProvider);
+  ref.invalidate(adminOpenReportsProvider);
   ref.invalidate(adminModerationCountsProvider);
 }

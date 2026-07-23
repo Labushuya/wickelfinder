@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../map/domain/changing_place.dart';
 import '../domain/admin_place_feedback.dart';
 import '../domain/moderation_counts.dart';
+import '../domain/open_report.dart';
 import '../domain/pending_photo.dart';
 import '../domain/place_flag.dart';
 import '../domain/place_photo.dart';
@@ -59,6 +60,7 @@ class CommunityException implements Exception {
     'report_rate_limit' =>
       'Zu viele Meldungen in kurzer Zeit. Bitte später erneut.',
     'photo_missing' => 'Dieses Foto existiert nicht (mehr).',
+    'report_missing' => 'Diese Meldung existiert nicht (mehr).',
     'bad_kind' => 'Ungültiger Melde-Grund.',
     'bad_path' => 'Ungültiger Datei-Pfad.',
     'admin_required' => 'Nur für Administratoren.',
@@ -656,6 +658,62 @@ class CommunityRepository {
     }
   }
 
+  /// Offene Inhaltsmeldungen (nur Admin) inkl. signierter Vorschau, falls Foto.
+  Future<List<OpenReport>> adminOpenReports() async {
+    try {
+      final rows = await _client.rpc<List<dynamic>>('admin_open_reports');
+      final result = <OpenReport>[];
+      for (final row in rows) {
+        final map = (row as Map).cast<String, dynamic>();
+        final path = map['storage_path'] as String?;
+        String? signed;
+        if (path != null) {
+          try {
+            signed = await _client.storage
+                .from(_bucket)
+                .createSignedUrl(path, _signedUrlTtl);
+          } catch (_) {}
+        }
+        result.add(OpenReport.fromRow(map, signed));
+      }
+      return result;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Ein Foto als Admin loeschen (inkl. Meldungen): erst DB-Zeile via RPC, dann
+  /// das Storage-Objekt (falls Pfad bekannt).
+  Future<void> adminDeletePhoto(String photoId, {String? storagePath}) async {
+    try {
+      await _client.rpc<void>(
+        'admin_delete_photo',
+        params: {'p_photo_id': photoId},
+      );
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+    if (storagePath != null) {
+      try {
+        await _client.storage.from(_bucket).remove([storagePath]);
+      } catch (_) {
+        // Objekt evtl. schon weg -> nicht fatal, DB-Zeile ist entfernt.
+      }
+    }
+  }
+
+  /// Eine Meldung als Admin verwerfen/schliessen (Foto bleibt bestehen).
+  Future<void> adminDismissReport(String reportId) async {
+    try {
+      await _client.rpc<void>(
+        'admin_dismiss_report',
+        params: {'p_report_id': reportId},
+      );
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
   /// Zieht den 'raise exception <code>'-Text aus der Postgres-Fehlermeldung.
   static String _extractCode(String message) {
     // Spezifischere Codes zuerst: 'geo_rate_limit' enthaelt 'rate_limit'.
@@ -670,6 +728,7 @@ class CommunityRepository {
       'photo_exists',
       'photo_limit',
       'photo_missing',
+      'report_missing',
       'bad_kind',
       'bad_path',
       'admin_required',
