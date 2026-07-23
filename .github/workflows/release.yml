@@ -72,6 +72,7 @@ jobs:
           add_perm ACCESS_FINE_LOCATION
           add_perm ACCESS_COARSE_LOCATION
           add_perm REQUEST_INSTALL_PACKAGES
+          add_perm CAMERA
           echo '--- uses-permission im Release-Manifest ---'
           grep 'uses-permission' "$MANIFEST"
           # fail-fast: bricht den Build ab, falls der Inject nicht griff

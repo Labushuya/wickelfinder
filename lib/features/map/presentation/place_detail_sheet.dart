@@ -1,11 +1,15 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bottom_toast.dart';
+import '../../account/presentation/login_prompt.dart';
 import '../../community/data/community_repository.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../community/domain/place_flag.dart';
+import '../../community/domain/place_photo.dart';
 import '../../community/domain/place_stats.dart';
 import '../../community/domain/place_tag.dart';
 import '../../community/presentation/accumulated_places.dart';
@@ -37,6 +41,7 @@ class PlaceDetailSheet extends ConsumerWidget {
     final myFlag = ref.watch(myFlagProvider(place.placeRef)).valueOrNull;
     final myConfirmed =
         ref.watch(myConfirmationProvider(place.placeRef)).valueOrNull ?? false;
+    final myPhoto = ref.watch(myPhotoProvider(place.placeRef)).valueOrNull;
 
     // Bearbeiten/Loeschen anbieten, wenn eigener Community-Pin ODER Admin.
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
@@ -74,6 +79,7 @@ class PlaceDetailSheet extends ConsumerWidget {
                     style: theme.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
+                  _PhotoStrip(placeRef: place.placeRef),
                   _RatingSummary(stats: stats),
                   if (myRating != null) ...[
                     const SizedBox(height: 6),
@@ -191,6 +197,23 @@ class PlaceDetailSheet extends ConsumerWidget {
                         ),
                       ),
                     ],
+                  ),
+                  // Foto: hinzufuegen (nur mit Konto) bzw. eigenes verwalten.
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: Icon(
+                        myPhoto == null
+                            ? Icons.add_a_photo_outlined
+                            : Icons.photo_camera_outlined,
+                      ),
+                      label: Text(
+                        myPhoto == null ? 'Foto hinzufügen' : 'Mein Foto',
+                      ),
+                      onPressed: () =>
+                          _photoAction(context, ref, repo, myPhoto),
+                    ),
                   ),
                   if (canManage) ...[
                     const SizedBox(height: 8),
@@ -439,6 +462,142 @@ class PlaceDetailSheet extends ConsumerWidget {
           context,
           'Bestätigung fehlgeschlagen. Bitte später erneut.',
         );
+      }
+    }
+  }
+
+  /// Foto-Aktion: ohne eigenes Foto -> hochladen (konto-pflichtig); mit eigenem
+  /// Foto -> Aktionen (ersetzen/entfernen).
+  Future<void> _photoAction(
+    BuildContext context,
+    WidgetRef ref,
+    CommunityRepository repo,
+    PlacePhoto? mine,
+  ) async {
+    if (mine == null) {
+      // Upload braucht ein echtes Konto (nicht anonym).
+      if (!ref.read(isLoggedInProvider)) {
+        await promptLogin(
+          context,
+          reason:
+              'Zum Hinzufügen eines Fotos brauchst du ein kostenloses Konto.',
+        );
+        return;
+      }
+      await _uploadPhoto(context, ref, repo);
+      return;
+    }
+    // Eigenes Foto -> Verwaltungs-Sheet.
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (mine.isPending)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  'Dein Foto wartet auf Freigabe und ist nur für dich sichtbar.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ),
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Foto ersetzen'),
+              onTap: () => Navigator.pop(ctx, 'replace'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Foto entfernen'),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (action == 'delete') {
+      await _deletePhoto(context, ref, repo, mine);
+    } else if (action == 'replace') {
+      // Erst entfernen (1-pro-Platz-Cap), dann neu hochladen.
+      await _deletePhoto(context, ref, repo, mine, silent: true);
+      if (context.mounted) await _uploadPhoto(context, ref, repo);
+    }
+  }
+
+  Future<void> _uploadPhoto(
+    BuildContext context,
+    WidgetRef ref,
+    CommunityRepository repo,
+  ) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Kamera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galerie'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 2048,
+      imageQuality: 90,
+    );
+    if (picked == null) return;
+
+    if (context.mounted) showBottomToast(context, 'Foto wird hochgeladen …');
+    try {
+      await repo.uploadPhoto(placeRef: place.placeRef, picked: picked);
+      refreshPhotos(ref, place.placeRef);
+      if (context.mounted) {
+        showBottomToast(
+          context,
+          'Foto hochgeladen. Es ist nach Freigabe für alle sichtbar.',
+        );
+      }
+    } on CommunityException catch (e) {
+      if (context.mounted) showBottomToast(context, e.userMessage);
+    } catch (_) {
+      if (context.mounted) {
+        showBottomToast(context, 'Upload fehlgeschlagen. Bitte später erneut.');
+      }
+    }
+  }
+
+  Future<void> _deletePhoto(
+    BuildContext context,
+    WidgetRef ref,
+    CommunityRepository repo,
+    PlacePhoto photo, {
+    bool silent = false,
+  }) async {
+    try {
+      await repo.deleteMyPhoto(photo);
+      refreshPhotos(ref, place.placeRef);
+      if (!silent && context.mounted) {
+        showBottomToast(context, 'Foto entfernt.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        showBottomToast(context, 'Entfernen fehlgeschlagen.');
       }
     }
   }
@@ -987,5 +1146,172 @@ class _CommunityConsensus extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Horizontale Foto-Leiste: freigegebene Fotos + evtl. eigenes (pending mit
+/// Badge). Tap -> Vollbild. Leer -> nichts (haelt das Sheet kompakt).
+class _PhotoStrip extends ConsumerWidget {
+  const _PhotoStrip({required this.placeRef});
+  final String placeRef;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photos = ref.watch(photosProvider(placeRef)).valueOrNull ?? const [];
+    if (photos.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        height: 96,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: photos.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            final p = photos[i];
+            return GestureDetector(
+              onTap: () => _openFullscreen(context, p),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Stack(
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: p.signedUrl,
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        width: 96,
+                        height: 96,
+                        color: theme.colorScheme.surfaceContainerHighest,
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        width: 96,
+                        height: 96,
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: const Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
+                    if (p.isPending)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          color: Colors.amber.withValues(alpha: 0.85),
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: const Text(
+                            'wartet auf Freigabe',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 9, color: Colors.black),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openFullscreen(BuildContext context, PlacePhoto photo) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _PhotoViewer(photo: photo, placeRef: placeRef),
+      ),
+    );
+  }
+}
+
+/// Vollbild-Ansicht eines Fotos mit Zoom + Melden-Aktion.
+class _PhotoViewer extends ConsumerWidget {
+  const _PhotoViewer({required this.photo, required this.placeRef});
+  final PlacePhoto photo;
+  final String placeRef;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag_outlined),
+            tooltip: 'Foto melden',
+            onPressed: () => _report(context, ref),
+          ),
+        ],
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: CachedNetworkImage(
+            imageUrl: photo.signedUrl,
+            fit: BoxFit.contain,
+            errorWidget: (_, __, ___) =>
+                const Icon(Icons.broken_image_outlined, color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _report(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(communityRepositoryProvider);
+    if (repo == null) return;
+    const kinds = {
+      'pii': 'Zeigt Personen / persönliche Daten',
+      'abuse': 'Anstößig / unangemessen',
+      'spam': 'Spam / Werbung',
+      'other': 'Sonstiges',
+    };
+    final kind = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Text(
+                'Warum meldest du dieses Foto?',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final e in kinds.entries)
+              ListTile(
+                title: Text(e.value),
+                onTap: () => Navigator.pop(ctx, e.key),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (kind == null) return;
+    try {
+      await repo.reportContent(
+        placeRef: placeRef,
+        kind: kind,
+        photoId: photo.id,
+      );
+      if (context.mounted) {
+        showBottomToast(context, 'Danke, zur Prüfung gemeldet.');
+      }
+    } on CommunityException catch (e) {
+      if (context.mounted) showBottomToast(context, e.userMessage);
+    } catch (_) {
+      if (context.mounted) {
+        showBottomToast(context, 'Melden fehlgeschlagen. Bitte später erneut.');
+      }
+    }
   }
 }

@@ -1,9 +1,14 @@
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../map/domain/changing_place.dart';
 import '../domain/admin_place_feedback.dart';
+import '../domain/moderation_counts.dart';
+import '../domain/pending_photo.dart';
 import '../domain/place_flag.dart';
+import '../domain/place_photo.dart';
 import '../domain/place_stats.dart';
 import '../domain/place_tag.dart';
 import 'anon_session.dart';
@@ -47,6 +52,14 @@ class CommunityException implements Exception {
     'geo_cluster_cap' => 'In diesem Bereich gibt es bereits viele Einträge.',
     'self_rating' => 'Eigene Plätze können nicht bewertet werden.',
     'self_flag' => 'Eigene Plätze können nicht gemeldet werden.',
+    'photo_exists' => 'Du hast für diesen Platz bereits ein Foto.',
+    'photo_rate_limit' => 'Zu viele Fotos in kurzer Zeit. Bitte später erneut.',
+    'report_rate_limit' =>
+      'Zu viele Meldungen in kurzer Zeit. Bitte später erneut.',
+    'photo_missing' => 'Dieses Foto existiert nicht (mehr).',
+    'bad_kind' => 'Ungültiger Melde-Grund.',
+    'bad_path' => 'Ungültiger Datei-Pfad.',
+    'admin_required' => 'Nur für Administratoren.',
     'auth_required' => 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
     'bad_stars' => 'Ungültige Bewertung.',
     'too_many_tags' => 'Bitte höchstens 10 Eigenschaften auswählen.',
@@ -430,15 +443,233 @@ class CommunityRepository {
     }
   }
 
+  // --- Fotos ----------------------------------------------------------------
+
+  static const _bucket = 'place-photos';
+  // Signierte URLs 7 Tage gueltig -> Cache-Key bleibt stabil (Egress-schonend).
+  static const _signedUrlTtl = 604800;
+
+  /// Laedt ein Foto hoch: EXIF/GPS entfernen + komprimieren -> Storage ->
+  /// register_photo. Verlangt ein ECHTES Konto (nicht anonym). Gibt die
+  /// neue Foto-ID zurueck.
+  Future<String> uploadPhoto({
+    required String placeRef,
+    required XFile picked,
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null || user.isAnonymous) {
+      throw const CommunityException('auth_required');
+    }
+    final uid = user.id;
+
+    // Komprimieren + Metadaten entfernen (keepExif:false -> GPS/Geraet/Zeit weg).
+    final bytes = await _compressForUpload(picked);
+
+    // Pfad im eigenen Ordner: <uid>/<place_slug>/<zeitstempel>.jpg
+    final slug = placeRef.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final path = '$uid/$slug/$stamp.jpg';
+
+    try {
+      await _client.storage
+          .from(_bucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+            ),
+          );
+    } catch (e) {
+      throw CommunityException('upload_failed', e.toString());
+    }
+
+    try {
+      final id = await _client.rpc<String>(
+        'register_photo',
+        params: {'p_ref': placeRef, 'p_path': path},
+      );
+      return id;
+    } on PostgrestException catch (e) {
+      // Registrierung fehlgeschlagen -> hochgeladenes Objekt best-effort
+      // entfernen, damit kein Orphan zurueckbleibt.
+      try {
+        await _client.storage.from(_bucket).remove([path]);
+      } catch (_) {}
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Komprimiert ein gewaehltes Bild auf ~200 KB / ~1280px, JPEG, OHNE EXIF.
+  Future<List<int>> _compressForUpload(XFile picked) async {
+    Future<List<int>?> attempt(int quality) async {
+      final out = await FlutterImageCompress.compressWithFile(
+        picked.path,
+        minWidth: 1280,
+        minHeight: 1280,
+        quality: quality,
+        format: CompressFormat.jpeg,
+        keepExif: false, // GPS/Geraet/Zeit werden entfernt (DSGVO).
+      );
+      return out;
+    }
+
+    // Erst Qualitaet 70; wenn noch > ~230 KB, einmal auf 55 nachverdichten.
+    var bytes = await attempt(70);
+    if (bytes != null && bytes.length > 230 * 1024) {
+      final smaller = await attempt(55);
+      if (smaller != null) bytes = smaller;
+    }
+    if (bytes == null || bytes.isEmpty) {
+      throw const CommunityException('upload_failed', 'compress returned null');
+    }
+    return bytes;
+  }
+
+  /// Laedt Fotos zu den place_refs (freigegebene + eigene pending) und signiert
+  /// je eine Anzeige-URL. Lesen ohne Login moeglich (nur freigegebene).
+  Future<List<PlacePhoto>> photosFor(List<String> refs) async {
+    if (refs.isEmpty) return const [];
+    final capped = refs.length > 200 ? refs.sublist(0, 200) : refs;
+    final rows = await _client.rpc<List<dynamic>>(
+      'photos_for',
+      params: {'refs': capped},
+    );
+    final result = <PlacePhoto>[];
+    for (final row in rows) {
+      final map = (row as Map).cast<String, dynamic>();
+      final path = map['storage_path'] as String;
+      String signed = '';
+      try {
+        signed = await _client.storage
+            .from(_bucket)
+            .createSignedUrl(path, _signedUrlTtl);
+      } catch (_) {
+        // Signieren scheitert (z. B. keine Leserechte) -> Foto ueberspringen.
+        continue;
+      }
+      result.add(PlacePhoto.fromRow(map, signed));
+    }
+    return result;
+  }
+
+  /// Das eigene Foto zu einem Platz (null, wenn keins).
+  Future<PlacePhoto?> myPhoto(String placeRef) async {
+    if (_client.auth.currentUser == null) return null;
+    final photos = await photosFor([placeRef]);
+    for (final p in photos) {
+      if (p.isMine) return p;
+    }
+    return null;
+  }
+
+  /// Loescht das eigene Foto: erst das Storage-Objekt, dann die DB-Zeile
+  /// (Reihenfolge so, dass kein Orphan-Objekt zurueckbleibt).
+  Future<void> deleteMyPhoto(PlacePhoto photo) async {
+    try {
+      await _client.storage.from(_bucket).remove([photo.storagePath]);
+    } catch (_) {
+      // Objekt evtl. schon weg -> trotzdem die Zeile entfernen.
+    }
+    try {
+      await _client.rpc<void>(
+        'delete_my_photo',
+        params: {'p_photo_id': photo.id},
+      );
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Meldet einen Inhalt (Foto oder Platz). Kind: pii/abuse/spam/other.
+  Future<void> reportContent({
+    required String placeRef,
+    required String kind,
+    String? photoId,
+  }) async {
+    await _session.ensureSignedIn();
+    try {
+      await _client.rpc<void>(
+        'report_content',
+        params: {'p_ref': placeRef, 'p_kind': kind, 'p_photo_id': photoId},
+      );
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  // --- Admin-Foto-Moderation ------------------------------------------------
+
+  /// Wartende Fotos (nur Admin) inkl. signierter Vorschau-URL.
+  Future<List<PendingPhoto>> adminPendingPhotos() async {
+    try {
+      final rows = await _client.rpc<List<dynamic>>('admin_pending_photos');
+      final result = <PendingPhoto>[];
+      for (final row in rows) {
+        final map = (row as Map).cast<String, dynamic>();
+        final path = map['storage_path'] as String;
+        String signed = '';
+        try {
+          signed = await _client.storage
+              .from(_bucket)
+              .createSignedUrl(path, _signedUrlTtl);
+        } catch (_) {}
+        result.add(PendingPhoto.fromRow(map, signed));
+      }
+      return result;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Foto freigeben oder ablehnen (nur Admin). Bei Ablehnung optional Notiz.
+  Future<void> adminReviewPhoto(
+    String photoId, {
+    required bool approve,
+    String? note,
+  }) async {
+    try {
+      await _client.rpc<void>(
+        'admin_review_photo',
+        params: {'p_photo_id': photoId, 'p_approve': approve, 'p_note': note},
+      );
+    } on PostgrestException catch (e) {
+      throw CommunityException(_extractCode(e.message), e.message);
+    }
+  }
+
+  /// Pruefungsbeduerftige Zaehler je place_ref (nur Admin). Leer ohne Recht.
+  Future<Map<String, ModerationCounts>> adminModerationCounts() async {
+    try {
+      final rows = await _client.rpc<List<dynamic>>('admin_moderation_counts');
+      final result = <String, ModerationCounts>{};
+      for (final row in rows) {
+        final map = (row as Map).cast<String, dynamic>();
+        result[map['place_ref'] as String] = ModerationCounts.fromRow(map);
+      }
+      return result;
+    } catch (_) {
+      return const {};
+    }
+  }
+
   /// Zieht den 'raise exception <code>'-Text aus der Postgres-Fehlermeldung.
   static String _extractCode(String message) {
     // Spezifischere Codes zuerst: 'geo_rate_limit' enthaelt 'rate_limit'.
     for (final code in [
       'geo_rate_limit',
       'geo_cluster_cap',
+      'photo_rate_limit',
+      'report_rate_limit',
       'rate_limit',
       'self_rating',
       'self_flag',
+      'photo_exists',
+      'photo_missing',
+      'bad_kind',
+      'bad_path',
+      'admin_required',
       'auth_required',
       'bad_stars',
       'too_many_tags',

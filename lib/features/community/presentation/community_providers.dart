@@ -8,7 +8,10 @@ import '../../map/domain/changing_place.dart';
 import '../data/community_cache.dart';
 import '../data/community_repository.dart';
 import '../domain/admin_place_feedback.dart';
+import '../domain/moderation_counts.dart';
+import '../domain/pending_photo.dart';
 import '../domain/place_flag.dart';
+import '../domain/place_photo.dart';
 import '../domain/place_stats.dart';
 import 'accumulated_places.dart';
 
@@ -163,4 +166,53 @@ Future<void> refreshCommunityData(Ref ref) async {
 Future<void> refreshCommunityDataFromWidget(WidgetRef ref) async {
   await ref.read(communityPlacesProvider.notifier).refresh();
   ref.invalidate(myPlacesProvider);
+}
+
+/// Fotos zu einem Platz (freigegebene + eigene pending), je mit signierter URL.
+final photosProvider = FutureProvider.family<List<PlacePhoto>, String>((
+  ref,
+  placeRef,
+) async {
+  ref.watch(authChangesProvider); // eigenes pending nach Login/Sign-In zeigen
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return const [];
+  return repo.photosFor([placeRef]);
+});
+
+/// Das eigene Foto zu einem Platz (null, wenn keins).
+final myPhotoProvider = FutureProvider.family<PlacePhoto?, String>((
+  ref,
+  placeRef,
+) async {
+  ref.watch(authChangesProvider);
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return null;
+  return repo.myPhoto(placeRef);
+});
+
+/// Wartende Fotos fuer die Admin-Freigabe. Leer ohne Adminrecht.
+final adminPendingPhotosProvider = FutureProvider<List<PendingPhoto>>((
+  ref,
+) async {
+  ref.watch(authChangesProvider);
+  final repo = ref.watch(communityRepositoryProvider);
+  if (repo == null) return const [];
+  return repo.adminPendingPhotos();
+});
+
+/// Pruefungsbeduerftige Zaehler je place_ref (Admin-Highlight, R2).
+final adminModerationCountsProvider =
+    FutureProvider<Map<String, ModerationCounts>>((ref) async {
+      ref.watch(authChangesProvider);
+      final repo = ref.watch(communityRepositoryProvider);
+      if (repo == null) return const {};
+      return repo.adminModerationCounts();
+    });
+
+/// Foto-bezogene Ansichten nach einer Aktion aktualisieren.
+void refreshPhotos(WidgetRef ref, String placeRef) {
+  ref.invalidate(photosProvider(placeRef));
+  ref.invalidate(myPhotoProvider(placeRef));
+  ref.invalidate(adminPendingPhotosProvider);
+  ref.invalidate(adminModerationCountsProvider);
 }

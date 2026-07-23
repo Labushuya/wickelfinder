@@ -78,6 +78,32 @@ Deno.serve(async (req) => {
     });
   }
 
+  // 2b) Foto-Objekte im Storage entfernen (SQL kann das nicht -> DSGVO Art. 17).
+  // Alle Objekte des Nutzers liegen unter dem Prefix "<uid>/" im Bucket
+  // 'place-photos' (Pfad <uid>/<place_slug>/<uuid>.jpg). Rekursiv einsammeln
+  // und loeschen. Fehler hier sind nicht fatal fuer die Kontoloeschung, werden
+  // aber protokolliert (Rest-Objekte faengt spaeter ein Sweep ab).
+  try {
+    const bucket = admin.storage.from('place-photos');
+    const toRemove: string[] = [];
+    // list() ist nicht rekursiv -> pro Unterordner nachladen.
+    const { data: subdirs } = await bucket.list(userId, { limit: 1000 });
+    for (const entry of subdirs ?? []) {
+      // Ein Eintrag ohne id ist ein "Ordner" (place_slug) -> dessen Dateien holen.
+      const { data: files } = await bucket.list(`${userId}/${entry.name}`, { limit: 1000 });
+      for (const f of files ?? []) {
+        if (f.name) toRemove.push(`${userId}/${entry.name}/${f.name}`);
+      }
+      // Falls direkt Dateien unter <uid>/ liegen (Fallback).
+      if (entry.id) toRemove.push(`${userId}/${entry.name}`);
+    }
+    if (toRemove.length > 0) {
+      await bucket.remove(toRemove);
+    }
+  } catch (e) {
+    console.error('storage sweep failed (non-fatal):', e);
+  }
+
   // 3) Auth-Konto selbst loeschen (nur mit service_role moeglich).
   const { error: delUserErr } = await admin.auth.admin.deleteUser(userId);
   if (delUserErr) {
