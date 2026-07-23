@@ -3,6 +3,18 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.17.0] — 2026-07-23
+
+### Added
+- **Fotos zu Wickelplätzen:** Angemeldete Nutzer können ein Foto je Platz
+  hinzufügen (Kamera oder Galerie). Das Foto ist zunächst **nur für dich
+  sichtbar** („wartet auf Freigabe") und wird erst **nach Admin-Freigabe** für
+  alle öffentlich. Fotos lassen sich in der Vollbildansicht **melden**.
+  Metadaten (GPS/Gerät/Zeit) werden vor dem Upload **entfernt** (Datenschutz),
+  Bilder werden stark komprimiert.
+- **Admin: „Fotos prüfen"** — wartende Fotos mit Vorschau freigeben oder ablehnen.
+- **Konto/Anmelden** jetzt direkt im Menü erreichbar.
+
 ## [0.16.0] — 2026-07-23
 
 ### Changed

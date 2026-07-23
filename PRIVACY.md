@@ -59,6 +59,24 @@ Mitwirkende". Adresssuche und Basisdaten (vorhandene Wickeltisch-Orte) werden
 technisch deine IP-Adresse an diese Server übermittelt. Es gelten die
 [Datenschutzbestimmungen von OpenStreetMap](https://wiki.osmfoundation.org/wiki/Privacy_Policy).
 
+## 5a. Fotos (optional)
+
+Angemeldete Nutzer können pro Wickelplatz ein Foto hochladen. Wichtig:
+
+- **Metadaten werden entfernt:** Vor dem Upload werden Bild-Metadaten (u. a.
+  GPS-Standort, Gerät, Aufnahmezeit) beim Komprimieren **verworfen**. Es wird nur
+  das reine Bild gespeichert.
+- **Prüfung vor Veröffentlichung:** Ein Foto ist zunächst **nur für dich**
+  sichtbar und wird erst **nach Prüfung durch einen Administrator** öffentlich.
+- **Verantwortung für den Inhalt:** Lade keine Fotos hoch, die Personen erkennbar
+  zeigen oder Rechte Dritter verletzen. Jedes Foto kann von anderen **gemeldet**
+  werden und wird dann geprüft.
+- **Löschung:** Du kannst dein Foto jederzeit selbst entfernen. Bei Konto-Löschung
+  werden auch deine hochgeladenen Bilddateien vom Speicher gelöscht.
+- **Speicherort:** Fotos liegen im Speicher unseres Auftragsverarbeiters Supabase
+  (siehe Abschnitt 6), in einem nicht-öffentlichen Bereich; der Zugriff erfolgt
+  über zeitlich begrenzte, signierte Links.
+
 ## 6. Auftragsverarbeiter
 
 - **Supabase** (Hosting der Datenbank, Authentifizierung, Serverfunktionen).
@@ -77,6 +95,7 @@ technisch deine IP-Adresse an diese Server übermittelt. Es gelten die
 | Bestätigungen | Platz-Referenz, Zeitstempel | „existiert noch"-Signal |
 | Angelegte Plätze | Name, Lage-Hinweis, Koordinaten, Eigenschaften, Zeitstempel | Verzeichnis der Wickelplätze |
 | Inhaltsmeldungen | Platz-Referenz, Art (z. B. Spam), Zeitstempel | Moderation |
+| Fotos (optional) | Bilddatei, Platz-Referenz, Freigabe-Status, Zeitstempel | Community-Fotos zu Wickelplätzen |
 | Auth-Kennung | UUID, ggf. E-Mail (bei Konto/Admin), Zeitstempel | Zuordnung deiner Beiträge, Missbrauchsschutz |
 | Kontodaten (optional) | E-Mail-Adresse, verschlüsseltes Passwort | Kontoverwaltung, Login, Passwort-Reset |
 

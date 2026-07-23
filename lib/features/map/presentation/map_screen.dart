@@ -19,8 +19,10 @@ import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/my_places_screen.dart';
 import '../../community/presentation/my_ratings_screen.dart';
 import '../../community/presentation/nearby_places_screen.dart';
+import '../../community/presentation/photo_review_screen.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../account/presentation/account_login_screen.dart';
+import '../../account/presentation/login_prompt.dart';
 import '../../search/presentation/address_search_bar.dart';
 import '../../updater/presentation/update_sheet.dart';
 import '../domain/changing_place.dart';
@@ -260,6 +262,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
       onSelected: (v) async {
         if (v == 'update') {
           unawaited(UpdateSheet.checkAndShow(context, ref, manual: true));
+        } else if (v == 'account') {
+          unawaited(
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AccountLoginScreen()),
+            ),
+          );
         } else if (v == 'my_pins') {
           final sel = await Navigator.of(context).push<ChangingPlace>(
             MaterialPageRoute(builder: (_) => const MyPlacesScreen()),
@@ -270,6 +278,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
             MaterialPageRoute(builder: (_) => const AllPlacesScreen()),
           );
           if (sel != null) _goTo(sel.location);
+        } else if (v == 'photo_review') {
+          unawaited(
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PhotoReviewScreen()),
+            ),
+          );
         } else if (v == 'nearby') {
           final sel = await Navigator.of(context).push<ChangingPlace>(
             MaterialPageRoute(builder: (_) => const NearbyPlacesScreen()),
@@ -289,6 +303,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
         }
       },
       itemBuilder: (_) => [
+        if (hasBackend && !isLoggedIn)
+          const PopupMenuItem(
+            value: 'account',
+            child: Row(
+              children: [
+                Icon(Icons.login, size: 20),
+                SizedBox(width: 10),
+                Text('Anmelden / Registrieren'),
+              ],
+            ),
+          ),
         if (hasBackend && isLoggedIn)
           const PopupMenuItem(
             value: 'my_pins',
@@ -308,6 +333,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 Icon(Icons.list_alt, size: 20),
                 SizedBox(width: 10),
                 Text('Alle Pins [Admin]'),
+              ],
+            ),
+          ),
+        if (hasBackend && isAdmin)
+          const PopupMenuItem(
+            value: 'photo_review',
+            child: Row(
+              children: [
+                Icon(Icons.photo_library_outlined, size: 20),
+                SizedBox(width: 10),
+                Text('Fotos prüfen [Admin]'),
               ],
             ),
           ),
@@ -589,47 +625,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
   }
 
   /// Hinweis + CTA zum Anmelden/Registrieren, wenn eine konto-pflichtige
-  /// Aktion ohne Konto versucht wird.
-  Future<void> _promptLogin() async {
-    final go = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          8,
-          20,
-          20 + MediaQuery.viewPaddingOf(ctx).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Konto benötigt', style: Theme.of(ctx).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            const Text(
-              'Zum Melden und Verwalten von Wickelplätzen brauchst du ein '
-              'kostenloses Konto. Bewerten geht auch ohne.',
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.login),
-                label: const Text('Anmelden / Registrieren'),
-                onPressed: () => Navigator.pop(ctx, true),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (go == true && mounted) {
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const AccountLoginScreen()));
-    }
-  }
+  /// Aktion ohne Konto versucht wird. Nutzt den zentralen Helfer.
+  Future<void> _promptLogin() => promptLogin(context);
 }
 
 /// Kleiner Hell-/Dunkel-Schnellumschalter (Sonne/Mond) neben der Suchleiste.

@@ -3,7 +3,7 @@ description: "Wickelfinder – finde schnell Wickelplätze in deiner Nähe. Comm
 publish_to: "none"
 
 # SemVer: MAJOR.MINOR.PATCH+BUILD
-version: 0.16.0+38
+version: 0.17.0+39
 
 environment:
   # supabase_flutter 2.16 verlangt Dart >=3.9 / Flutter >=3.35 (= CI-Pin 3.35.5).
@@ -37,6 +37,11 @@ dependencies:
   shared_preferences: 2.5.3
   # Admin-Zugangsdaten verschluesselt ablegen (Android Keystore / iOS Keychain)
   flutter_secure_storage: 9.2.4
+  # Fotos: aufnehmen/waehlen, komprimieren (EXIF/GPS wird dabei entfernt),
+  # heruntergeladene Bilder on-device cachen (Egress-schonend, €0-Ziel).
+  image_picker: 1.1.2
+  flutter_image_compress: 2.3.0
+  cached_network_image: 3.4.1
   # Icons
   cupertino_icons: 1.0.8
 
