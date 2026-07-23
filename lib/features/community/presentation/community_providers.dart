@@ -179,15 +179,15 @@ final photosProvider = FutureProvider.family<List<PlacePhoto>, String>((
   return repo.photosFor([placeRef]);
 });
 
-/// Das eigene Foto zu einem Platz (null, wenn keins).
-final myPhotoProvider = FutureProvider.family<PlacePhoto?, String>((
+/// Die EIGENEN Fotos zu einem Platz (bis zu 3), leer wenn keine.
+final myPhotosProvider = FutureProvider.family<List<PlacePhoto>, String>((
   ref,
   placeRef,
 ) async {
   ref.watch(authChangesProvider);
   final repo = ref.watch(communityRepositoryProvider);
-  if (repo == null) return null;
-  return repo.myPhoto(placeRef);
+  if (repo == null) return const [];
+  return repo.myPhotos(placeRef);
 });
 
 /// Wartende Fotos fuer die Admin-Freigabe. Leer ohne Adminrecht.
@@ -212,7 +212,7 @@ final adminModerationCountsProvider =
 /// Foto-bezogene Ansichten nach einer Aktion aktualisieren.
 void refreshPhotos(WidgetRef ref, String placeRef) {
   ref.invalidate(photosProvider(placeRef));
-  ref.invalidate(myPhotoProvider(placeRef));
+  ref.invalidate(myPhotosProvider(placeRef));
   ref.invalidate(adminPendingPhotosProvider);
   ref.invalidate(adminModerationCountsProvider);
 }
