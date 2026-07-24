@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/admin/data/auth_repository.dart';
-import '../../features/admin/presentation/admin_dashboard_screen.dart';
 import '../../features/privacy/data/account_repository.dart';
 import '../../features/privacy/presentation/privacy_screen.dart';
 import 'theme_controller.dart';
@@ -51,10 +50,11 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const Divider(),
-          _AdminSection(),
-          const Divider(),
-          _MyDataSection(),
+          // Konto/Login gehoert vollstaendig ins 3-Punkt-Menue (Karte) — hier
+          // bewusst KEINE login-/admin-bezogenen Inhalte mehr.
+          // „Meine Daten" (DSGVO) bringt seinen Trenner selbst mit, nur wenn es
+          // ueberhaupt etwas anzeigt -> keine verwaisten Trennlinien.
+          const _MyDataSection(),
           const Divider(),
           const _SectionHeader('Über'),
           ListTile(
@@ -100,49 +100,12 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Admin-Status (nur Anzeige). Es gibt keinen separaten Admin-Login mehr —
-/// Admin-Rechte erkennt der Server (is_admin) am ganz normalen Login. Fuer
-/// Nicht-Admins wird nichts angezeigt; An-/Abmelden laeuft ueber das Konto-Menue.
-class _AdminSection extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.watch(authRepositoryProvider);
-    if (repo == null) return const SizedBox.shrink();
-    final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
-    if (!isAdmin) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const _SectionHeader('Verwaltung'),
-        const ListTile(
-          leading: Icon(Icons.verified_user, color: Colors.green),
-          title: Text('Als Admin angemeldet'),
-          subtitle: Text(
-            'Du kannst alle Pins bearbeiten/löschen und Fotos freigeben. '
-            'Abmelden über das Konto-Menü (oben rechts).',
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.admin_panel_settings_outlined),
-          title: const Text('Verwaltung öffnen'),
-          subtitle: const Text(
-            'Übersicht, Fotos prüfen, Meldungen, alle Pins.',
-          ),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// DSGVO-Bereich „Meine Daten": Export (Auskunft/Portabilitaet) + vollstaendige
 /// Loeschung (inkl. Auth-Konto). Nur sichtbar, wenn eine Identitaet existiert
 /// (ohne Beitrag fallen keine Daten an).
 class _MyDataSection extends ConsumerStatefulWidget {
+  const _MyDataSection();
+
   @override
   ConsumerState<_MyDataSection> createState() => _MyDataSectionState();
 }
@@ -161,6 +124,8 @@ class _MyDataSectionState extends ConsumerState<_MyDataSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Trenner gehoert zur Sektion: erscheint nur, wenn sie sichtbar ist.
+        const Divider(),
         const _SectionHeader('Meine Daten'),
         ListTile(
           leading: const Icon(Icons.download_outlined),

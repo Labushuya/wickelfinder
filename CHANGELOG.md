@@ -16,8 +16,11 @@ Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 
 ### Changed
 - Die früheren einzelnen Admin-Menüeinträge („Alle Pins", „Fotos prüfen")
-  wurden zu **einem** Eintrag „Verwaltung [Admin]" zusammengefasst. Zweiter
-  Zugang: Einstellungen → Verwaltung → „Verwaltung öffnen".
+  wurden zu **einem** Eintrag „Verwaltung [Admin]" zusammengefasst.
+- **Einstellungen aufgeräumt:** Die login-/admin-bezogene „Verwaltung"-Sektion
+  ist aus den Einstellungen entfernt — Konto und Verwaltung laufen vollständig
+  über das 3-Punkt-Menü. Außerdem verschwinden jetzt überflüssige Trennlinien
+  (Trenner erscheinen nur noch, wenn die Sektion darüber wirklich Inhalt hat).
 
 ### Hinweise
 - Neue Migration **`0023_admin_moderation_actions.sql`** muss im Supabase
