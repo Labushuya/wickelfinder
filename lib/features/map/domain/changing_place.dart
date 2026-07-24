@@ -43,6 +43,7 @@ class ChangingPlace {
     this.fee,
     this.feeMode,
     this.locationHint,
+    this.openingHours,
     this.source = PlaceSource.osm,
     this.venueContext = VenueContext.unknown,
   });
@@ -67,6 +68,10 @@ class ChangingPlace {
 
   /// Freitext-Hinweis zur Lage, z. B. aus `changing_table:location`.
   final String? locationHint;
+
+  /// Roher OSM-`opening_hours`-String (z. B. "Mo-Fr 08:00-18:00", "24/7").
+  /// null = keine Angabe. Nur OSM; Community-Plaetze tragen das nicht.
+  final String? openingHours;
 
   final PlaceSource source;
 
@@ -105,6 +110,7 @@ class ChangingPlace {
       wheelchairAccessible: _yesNo(tags['wheelchair'] as String?),
       fee: _yesNo(tags['fee'] as String?),
       locationHint: tags['changing_table:location'] as String?,
+      openingHours: tags['opening_hours'] as String?,
       venueContext: VenueContext.fromTags(stringTags),
     );
   }

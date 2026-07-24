@@ -17,6 +17,7 @@ import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/rate_place_dialog.dart';
 import '../domain/changing_place.dart';
+import '../domain/opening_hours_format.dart';
 
 /// Bottom-Sheet mit Details zu einem Wickelplatz inkl. Community-Bewertung.
 class PlaceDetailSheet extends ConsumerWidget {
@@ -101,6 +102,11 @@ class PlaceDetailSheet extends ConsumerWidget {
                     _InfoRow(
                       icon: Icons.place_outlined,
                       label: place.locationHint!,
+                    ),
+                  if (place.openingHours != null)
+                    _InfoRow(
+                      icon: Icons.schedule,
+                      label: formatOpeningHours(place.openingHours!),
                     ),
                   if (place.wheelchairAccessible != null)
                     _InfoRow(
@@ -891,6 +897,25 @@ class _AccessibilityBanner extends StatelessWidget {
                   Expanded(
                     child: Text(
                       verdict.note!,
+                      style: theme.textTheme.bodySmall?.copyWith(color: fg),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Verfuegbarkeits-Hinweis (D): nur wenn der Ort typischerweise
+          // Eintritt/Konsum voraussetzt UND keine konkreten OSM-Zeiten vorliegen
+          // (echte Zeiten stehen dann bereits als eigene Zeile -> keine Doppelung).
+          if (ctx.accessRestricted && place.openingHours == null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 28),
+              child: Row(
+                children: [
+                  Icon(Icons.schedule, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Meist während der Öffnungszeiten des Lokals zugänglich',
                       style: theme.textTheme.bodySmall?.copyWith(color: fg),
                     ),
                   ),
