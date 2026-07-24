@@ -55,6 +55,7 @@ class OsmCache {
     'wheelchair': p.wheelchairAccessible,
     'fee': p.fee,
     'hint': p.locationHint,
+    'oh': p.openingHours,
     'ctx': p.venueContext.name,
   };
 
@@ -71,6 +72,7 @@ class OsmCache {
       wheelchairAccessible: j['wheelchair'] as bool?,
       fee: j['fee'] as bool?,
       locationHint: j['hint'] as String?,
+      openingHours: j['oh'] as String?,
       venueContext: VenueContext.values.firstWhere(
         (v) => v.name == ctxName,
         orElse: () => VenueContext.unknown,

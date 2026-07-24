@@ -3,6 +3,17 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.20.0] — 2026-07-24
+
+### Added
+- **Öffnungszeiten & Verfügbarkeit:** Wo OpenStreetMap Öffnungszeiten kennt,
+  zeigt der Platz sie jetzt an — gängige Zeiten in lesbarem Deutsch (z.B.
+  „Mo–Fr 8–18 Uhr", „Durchgehend geöffnet"), Ungewöhnliches im Original.
+- Für Wickeltische in Läden/Restaurants/Bädern (die typischerweise Eintritt
+  oder Konsum voraussetzen) erscheint der Hinweis **„Meist während der
+  Öffnungszeiten des Lokals zugänglich"** — auch wenn keine konkreten Zeiten
+  hinterlegt sind.
+
 ## [0.19.0] — 2026-07-24
 
 ### Added
