@@ -16,6 +16,8 @@ import '../../community/presentation/accumulated_places.dart';
 import '../../community/presentation/add_place_screen.dart';
 import '../../community/presentation/community_providers.dart';
 import '../../community/presentation/rate_place_dialog.dart';
+import '../../favorites/data/favorites_controller.dart';
+import '../../favorites/domain/favorite_place.dart';
 import '../domain/changing_place.dart';
 import '../domain/opening_hours_format.dart';
 
@@ -87,6 +89,25 @@ class PlaceDetailSheet extends ConsumerWidget {
                           place.name ?? 'Wickelplatz',
                           style: theme.textTheme.titleLarge,
                         ),
+                      ),
+                      // Favoriten-Stern (lokal, kein Login). Zustand live.
+                      Builder(
+                        builder: (context) {
+                          final isFav = ref
+                              .watch(favoritesProvider)
+                              .any((f) => f.placeRef == place.placeRef);
+                          return IconButton(
+                            icon: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              color: isFav ? theme.colorScheme.error : null,
+                            ),
+                            tooltip: isFav
+                                ? 'Aus Favoriten entfernen'
+                                : 'Zu Favoriten',
+                            onPressed: () =>
+                                _toggleFavorite(context, ref, place),
+                          );
+                        },
                       ),
                       if (canManage && repo != null)
                         PopupMenuButton<String>(
@@ -266,6 +287,31 @@ class PlaceDetailSheet extends ConsumerWidget {
             AddPlaceScreen(initialCenter: place.location, editPlace: place),
       ),
     );
+  }
+
+  /// Favoriten-Toggle (lokal). Speichert einen Snapshot (Ref + Koordinaten +
+  /// Name), damit die Favoritenliste auch nicht geladene Pins anfliegen kann.
+  Future<void> _toggleFavorite(
+    BuildContext context,
+    WidgetRef ref,
+    ChangingPlace place,
+  ) async {
+    final nowFav = await ref
+        .read(favoritesProvider.notifier)
+        .toggle(
+          FavoritePlace(
+            placeRef: place.placeRef,
+            lat: place.location.latitude,
+            lon: place.location.longitude,
+            name: place.name,
+          ),
+        );
+    if (context.mounted) {
+      showBottomToast(
+        context,
+        nowFav ? 'Zu Favoriten hinzugefügt.' : 'Aus Favoriten entfernt.',
+      );
+    }
   }
 
   Future<void> _delete(
