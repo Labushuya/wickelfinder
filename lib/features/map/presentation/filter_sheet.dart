@@ -2,19 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/changing_place.dart';
+import '../domain/map_filter.dart';
 import '../domain/venue_context.dart';
 import 'map_filter_provider.dart';
 
-/// Bottom-Sheet zum Filtern der Kartenpins. Schreibt live in den
-/// [mapFilterProvider]; die Karte reagiert sofort. Leerer Filter = alles zeigen.
-class FilterSheet extends ConsumerWidget {
+/// Bottom-Sheet zum Filtern der Kartenpins. Bearbeitet einen LOKALEN Entwurf;
+/// die Karte ändert sich erst bei „Übernehmen". Zurück / Abbrechen / Wegwischen
+/// verwerfen den Entwurf (der aktive Filter bleibt unverändert).
+class FilterSheet extends ConsumerStatefulWidget {
   const FilterSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends ConsumerState<FilterSheet> {
+  late MapFilter _draft;
+
+  @override
+  void initState() {
+    super.initState();
+    // Einmaliger Snapshot des aktuell aktiven Filters (MapFilter ist immutable).
+    _draft = ref.read(mapFilterProvider);
+  }
+
+  void _toggleVenue(VenueContext v) {
+    final next = <VenueContext>{..._draft.venues};
+    next.contains(v) ? next.remove(v) : next.add(v);
+    setState(() => _draft = _draft.copyWith(venues: next));
+  }
+
+  void _toggleSource(PlaceSource s) {
+    final next = <PlaceSource>{..._draft.sources};
+    next.contains(s) ? next.remove(s) : next.add(s);
+    setState(() => _draft = _draft.copyWith(sources: next));
+  }
+
+  void _apply() {
+    ref.read(mapFilterProvider.notifier).apply(_draft);
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final filter = ref.watch(mapFilterProvider);
-    final ctrl = ref.read(mapFilterProvider.notifier);
+    final d = _draft;
 
     return SafeArea(
       child: Column(
@@ -34,7 +66,10 @@ class FilterSheet extends ConsumerWidget {
                       TextButton.icon(
                         icon: const Icon(Icons.restart_alt, size: 18),
                         label: const Text('Zurücksetzen'),
-                        onPressed: filter.isActive ? ctrl.clear : null,
+                        // Nur den ENTWURF leeren, nicht den aktiven Filter.
+                        onPressed: d.isActive
+                            ? () => setState(() => _draft = const MapFilter())
+                            : null,
                       ),
                     ],
                   ),
@@ -46,32 +81,42 @@ class FilterSheet extends ConsumerWidget {
                     children: [
                       FilterChip(
                         label: const Text('Barrierefrei'),
-                        selected: filter.onlyBarrierefrei,
-                        onSelected: ctrl.setBarrierefrei,
+                        selected: d.onlyBarrierefrei,
+                        onSelected: (v) => setState(
+                          () => _draft = _draft.copyWith(onlyBarrierefrei: v),
+                        ),
                       ),
                       FilterChip(
                         label: const Text('Frei zugänglich'),
-                        selected: filter.onlyAccessible,
-                        onSelected: ctrl.setAccessible,
+                        selected: d.onlyAccessible,
+                        onSelected: (v) => setState(
+                          () => _draft = _draft.copyWith(onlyAccessible: v),
+                        ),
                       ),
                       FilterChip(
                         label: const Text('Kostenlos'),
-                        selected: filter.onlyFree,
-                        onSelected: ctrl.setFree,
+                        selected: d.onlyFree,
+                        onSelected: (v) => setState(
+                          () => _draft = _draft.copyWith(onlyFree: v),
+                        ),
                       ),
                       FilterChip(
                         label: const Text('Eigener Wickelraum'),
-                        selected: filter.onlyOwnRoom,
-                        onSelected: ctrl.setOwnRoom,
+                        selected: d.onlyOwnRoom,
+                        onSelected: (v) => setState(
+                          () => _draft = _draft.copyWith(onlyOwnRoom: v),
+                        ),
                       ),
                       FilterChip(
                         label: const Text('Jetzt geöffnet'),
-                        selected: filter.onlyOpenNow,
-                        onSelected: ctrl.setOpenNow,
+                        selected: d.onlyOpenNow,
+                        onSelected: (v) => setState(
+                          () => _draft = _draft.copyWith(onlyOpenNow: v),
+                        ),
                       ),
                     ],
                   ),
-                  if (filter.onlyOpenNow)
+                  if (d.onlyOpenNow)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
@@ -93,8 +138,8 @@ class FilterSheet extends ConsumerWidget {
                         if (v != VenueContext.unknown)
                           FilterChip(
                             label: Text('${v.emoji} ${v.label}'),
-                            selected: filter.venues.contains(v),
-                            onSelected: (_) => ctrl.toggleVenue(v),
+                            selected: d.venues.contains(v),
+                            onSelected: (_) => _toggleVenue(v),
                           ),
                     ],
                   ),
@@ -106,16 +151,13 @@ class FilterSheet extends ConsumerWidget {
                     children: [
                       FilterChip(
                         label: const Text('Community'),
-                        selected: filter.sources.contains(
-                          PlaceSource.community,
-                        ),
-                        onSelected: (_) =>
-                            ctrl.toggleSource(PlaceSource.community),
+                        selected: d.sources.contains(PlaceSource.community),
+                        onSelected: (_) => _toggleSource(PlaceSource.community),
                       ),
                       FilterChip(
                         label: const Text('OpenStreetMap'),
-                        selected: filter.sources.contains(PlaceSource.osm),
-                        onSelected: (_) => ctrl.toggleSource(PlaceSource.osm),
+                        selected: d.sources.contains(PlaceSource.osm),
+                        onSelected: (_) => _toggleSource(PlaceSource.osm),
                       ),
                     ],
                   ),
@@ -123,8 +165,8 @@ class FilterSheet extends ConsumerWidget {
               ),
             ),
           ),
-          // Fester Fuss: macht sichtbar, dass Filter SOFORT greifen, und bietet
-          // einen klaren Abschluss (Zurueck verwirft nichts).
+          // Fester Fuss: Änderungen wirken ERST mit „Übernehmen". Abbrechen /
+          // Zurück / Wegwischen verwerfen den Entwurf.
           Padding(
             padding: EdgeInsets.fromLTRB(
               16,
@@ -132,24 +174,22 @@ class FilterSheet extends ConsumerWidget {
               16,
               MediaQuery.viewPaddingOf(context).bottom + 12,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            child: Row(
               children: [
-                Text(
-                  'Die Auswahl wird sofort übernommen.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Abbrechen'),
                   ),
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
+                const SizedBox(width: 12),
+                Expanded(
                   child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _apply,
                     child: Text(
-                      filter.isActive
-                          ? 'Fertig (${filter.activeCount} Filter aktiv)'
-                          : 'Fertig',
+                      d.isActive
+                          ? 'Übernehmen (${d.activeCount})'
+                          : 'Übernehmen',
                     ),
                   ),
                 ),

@@ -28,6 +28,9 @@ class MapFilterController extends Notifier<MapFilter> {
   void setOpenNow(bool v) => state = state.copyWith(onlyOpenNow: v);
 
   void clear() => state = const MapFilter();
+
+  /// Uebernimmt einen kompletten (im Sheet lokal bearbeiteten) Filter-Entwurf.
+  void apply(MapFilter f) => state = f;
 }
 
 final mapFilterProvider = NotifierProvider<MapFilterController, MapFilter>(
