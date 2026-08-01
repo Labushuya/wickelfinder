@@ -3,6 +3,15 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.22.0] — 2026-08-01
+
+### Added
+- **Favoriten:** Tippe in einem Wickelplatz oben auf das **♥**, um ihn zu
+  favorisieren. Über den neuen Menüpunkt **„Favoriten"** (3-Punkt-Menü) siehst
+  du deine favorisierten Plätze und springst mit einem Tipp direkt hin.
+  Funktioniert ohne Anmeldung und ist sofort da (lokal auf dem Gerät
+  gespeichert — auch weit entfernte Favoriten bleiben auffindbar).
+
 ## [0.21.1] — 2026-08-01
 
 ### Fixed

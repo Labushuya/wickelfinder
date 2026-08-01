@@ -20,6 +20,7 @@ import '../../community/presentation/my_ratings_screen.dart';
 import '../../community/presentation/nearby_places_screen.dart';
 import '../../admin/data/auth_repository.dart';
 import '../../admin/presentation/admin_dashboard_screen.dart';
+import '../../favorites/presentation/favorites_screen.dart';
 import '../../account/presentation/account_login_screen.dart';
 import '../../account/presentation/login_prompt.dart';
 import '../../search/presentation/address_search_bar.dart';
@@ -276,6 +277,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
             MaterialPageRoute(builder: (_) => const MyPlacesScreen()),
           );
           if (sel != null) _goTo(sel.location);
+        } else if (v == 'favorites') {
+          final target = await Navigator.of(context).push<LatLng>(
+            MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+          );
+          if (target != null) _goTo(target);
         } else if (v == 'admin') {
           // Dashboard kann eine Pin-Auswahl (aus „Alle Pins") zurueckgeben.
           final sel = await Navigator.of(context).push<ChangingPlace>(
@@ -339,6 +345,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ],
             ),
           ),
+        // Favoriten sind lokal -> immer sichtbar, kein Login noetig.
+        const PopupMenuItem(
+          value: 'favorites',
+          child: Row(
+            children: [
+              Icon(Icons.favorite_border, size: 20),
+              SizedBox(width: 10),
+              Text('Favoriten'),
+            ],
+          ),
+        ),
         if (hasBackend && isAdmin)
           const PopupMenuItem(
             value: 'admin',
