@@ -188,8 +188,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                     onPressed: _apply,
                     child: Text(
                       d.isActive
-                          ? 'Übernehmen (${d.activeCount})'
+                          ? 'Übernehmen · ${d.activeCount}'
                           : 'Übernehmen',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),

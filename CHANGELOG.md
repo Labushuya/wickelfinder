@@ -3,6 +3,15 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.24.3] — 2026-08-01
+
+### Fixed
+- **Filter-Zähler korrekt:** Die Zahl am Filter zählt jetzt jede einzelne
+  Auswahl über alle Kategorien (Ortstyp, Quelle, Ausstattung) — vorher wurden
+  Ortstyp/Quelle nur als „eine" Kategorie gewertet.
+- **„Übernehmen"-Button:** Text bleibt einzeilig (kein Umbruch mehr bei
+  mehrstelliger Zahl).
+
 ## [0.24.2] — 2026-08-01
 
 ### Changed
