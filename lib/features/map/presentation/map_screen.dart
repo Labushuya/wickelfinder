@@ -120,6 +120,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final loading = ref.watch(placesProvider(_bbox)).isLoading;
     final accumulated = ref.watch(accumulatedPlacesProvider);
     final filter = ref.watch(mapFilterProvider);
+    // Einmal pro Build fuer den „jetzt geöffnet"-Filter (deterministisch je Frame).
+    final now = DateTime.now();
     final hasBackend = ref.watch(communityRepositoryProvider) != null;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -170,7 +172,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
               MarkerLayer(
                 rotate: true,
                 markers: _buildMarkers(
-                  accumulated.all.where(filter.matches).toList(),
+                  accumulated.all
+                      .where((p) => filter.matches(p, now: now))
+                      .toList(),
                 ),
               ),
             ],

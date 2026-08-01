@@ -9,6 +9,7 @@ ChangingPlace _p({
   FeeMode? feeMode,
   bool? fee,
   String? hint,
+  String? openingHours,
   VenueContext venue = VenueContext.unknown,
   PlaceSource source = PlaceSource.osm,
 }) => ChangingPlace(
@@ -18,6 +19,7 @@ ChangingPlace _p({
   feeMode: feeMode,
   fee: fee,
   locationHint: hint,
+  openingHours: openingHours,
   venueContext: venue,
   source: source,
 );
@@ -105,5 +107,36 @@ void main() {
     const f = MapFilter(onlyFree: true, onlyBarrierefrei: true);
     expect(f.activeCount, 2);
     expect(f.isActive, isTrue);
+  });
+
+  group('MapFilter — Nur jetzt geöffnet (Einschließen-Semantik)', () {
+    const f = MapFilter(onlyOpenNow: true);
+    final tue10 = DateTime(2026, 8, 4, 10, 0); // Dienstag
+    final tue19 = DateTime(2026, 8, 4, 19, 0);
+
+    test('aktuell offen -> drin', () {
+      expect(
+        f.matches(_p(openingHours: 'Mo-Fr 08:00-18:00'), now: tue10),
+        isTrue,
+      );
+    });
+    test('aktuell geschlossen -> raus', () {
+      expect(
+        f.matches(_p(openingHours: 'Mo-Fr 08:00-18:00'), now: tue19),
+        isFalse,
+      );
+    });
+    test('unbekannte Zeiten (komplex) -> drin', () {
+      expect(
+        f.matches(_p(openingHours: 'Mo-Fr 08:00-18:00; PH off'), now: tue19),
+        isTrue,
+      );
+    });
+    test('keine Zeitangabe -> drin', () {
+      expect(f.matches(_p(), now: tue19), isTrue);
+    });
+    test('ohne now-Parameter wirkungslos (schließt nichts aus)', () {
+      expect(f.matches(_p(openingHours: 'Mo-Fr 08:00-18:00')), isTrue);
+    });
   });
 }

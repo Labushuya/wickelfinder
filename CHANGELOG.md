@@ -3,6 +3,15 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.24.0] — 2026-08-01
+
+### Added
+- **„Jetzt geöffnet"-Status:** Bei Plätzen mit hinterlegten Öffnungszeiten zeigt
+  die Detailansicht, ob gerade **geöffnet** oder **geschlossen** ist. Neuer
+  Filter „Jetzt geöffnet" blendet aktuell geschlossene Plätze aus.
+  Bei unklaren/komplexen Zeiten wird bewusst **kein** Status behauptet (die App
+  rät nicht). Hinweis: Feiertage werden nicht berücksichtigt.
+
 ## [0.23.0] — 2026-08-01
 
 ### Added
