@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/bottom_toast.dart';
+import '../../map/domain/changing_place.dart';
 import '../data/community_repository.dart';
 import '../domain/open_report.dart';
+import 'accumulated_places.dart';
 import 'community_providers.dart';
 
 /// Admin-Screen zur Pruefung offener Meldungen. Je Meldung: Grund + (falls Foto)
@@ -18,7 +20,7 @@ class ReportsReviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(adminOpenReportsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Meldungen [Admin]')),
+      appBar: AppBar(title: const Text('Meldungen')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) =>
@@ -81,7 +83,13 @@ class _ReportCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(report.placeRef, style: theme.textTheme.bodySmall),
+          Text(
+            _reportPlaceHeading(
+              ref.watch(accumulatedPlacesProvider).byRef[report.placeRef],
+              report.placeRef,
+            ),
+            style: theme.textTheme.bodySmall,
+          ),
           if (report.isPhoto && report.signedUrl != null) ...[
             const SizedBox(height: 8),
             ClipRRect(
@@ -119,8 +127,8 @@ class _ReportCard extends ConsumerWidget {
                 ),
               if (report.isPhoto) const SizedBox(width: 8),
               Expanded(
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.check),
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.remove_done),
                   label: const Text('Meldung verwerfen'),
                   onPressed: () => _dismiss(context, ref),
                 ),
@@ -183,4 +191,15 @@ class _ReportCard extends ConsumerWidget {
       if (context.mounted) showBottomToast(context, 'Aktion fehlgeschlagen.');
     }
   }
+}
+
+/// Lesbarer Kopf für einen gemeldeten place_ref: Name (+ Lage) statt interner
+/// ID. Fällt auf einen generischen Text zurück, wenn der Platz nicht geladen ist.
+String _reportPlaceHeading(ChangingPlace? place, String rawRef) {
+  if (place == null) {
+    return rawRef.startsWith('community/') ? 'Community-Platz' : 'OSM-Platz';
+  }
+  final name = place.name ?? 'Wickelplatz';
+  final hint = place.displayLocationHint;
+  return hint == null ? name : '$name — $hint';
 }

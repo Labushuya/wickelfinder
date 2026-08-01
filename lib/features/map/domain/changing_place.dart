@@ -69,6 +69,23 @@ class ChangingPlace {
   /// Freitext-Hinweis zur Lage, z. B. aus `changing_table:location`.
   final String? locationHint;
 
+  /// Lesbarer Lage-Hinweis: uebersetzt bekannte OSM-Enum-Werte von
+  /// `changing_table:location` nach Deutsch; unbekannte Werte (inkl. echter
+  /// Community-Freitext) werden unveraendert durchgereicht. null wenn kein Hinweis.
+  String? get displayLocationHint {
+    final h = locationHint;
+    if (h == null) return null;
+    return switch (h) {
+      'wheelchair_toilet' => 'Im barrierefreien WC',
+      'dedicated_room' || 'baby_care_room' => 'Eigener Wickelraum',
+      'female_toilet' => 'Im Damen-WC',
+      'male_toilet' => 'Im Herren-WC',
+      'unisex_toilet' => 'Im Unisex-WC',
+      'bench' => 'Wickelbank',
+      _ => h,
+    };
+  }
+
   /// Roher OSM-`opening_hours`-String (z. B. "Mo-Fr 08:00-18:00", "24/7").
   /// null = keine Angabe. Nur OSM; Community-Plaetze tragen das nicht.
   final String? openingHours;

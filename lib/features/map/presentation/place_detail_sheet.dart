@@ -76,9 +76,52 @@ class PlaceDetailSheet extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    place.name ?? 'Wickelplatz',
-                    style: theme.textTheme.titleLarge,
+                  // Titelzeile: Name + (bei eigenem Pin/Admin) 3-Punkt-Menue
+                  // mit Bearbeiten/Loeschen — Verwaltungstiefe raus aus den
+                  // Haupt-Buttons.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          place.name ?? 'Wickelplatz',
+                          style: theme.textTheme.titleLarge,
+                        ),
+                      ),
+                      if (canManage && repo != null)
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (v) {
+                            if (v == 'edit') {
+                              _edit(context);
+                            } else if (v == 'delete') {
+                              _delete(context, ref, repo);
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 20),
+                                  SizedBox(width: 10),
+                                  Text('Bearbeiten'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline, size: 20),
+                                  SizedBox(width: 10),
+                                  Text('Löschen'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   _PhotoStrip(placeRef: place.placeRef),
@@ -95,31 +138,13 @@ class PlaceDetailSheet extends ConsumerWidget {
                       stats: stats,
                       onEdit: () => _edit(context),
                     ),
-                  _CommunityConsensus(stats: stats),
-                  if (isAdmin) _AdminFeedback(placeRef: place.placeRef),
-                  const SizedBox(height: 4),
-                  if (place.locationHint != null)
-                    _InfoRow(
-                      icon: Icons.place_outlined,
-                      label: place.locationHint!,
-                    ),
-                  if (place.openingHours != null)
-                    _InfoRow(
-                      icon: Icons.schedule,
-                      label: formatOpeningHours(place.openingHours!),
-                    ),
-                  if (place.wheelchairAccessible != null)
-                    _InfoRow(
-                      icon: Icons.accessible,
-                      label: place.wheelchairAccessible!
-                          ? 'Barrierefrei zugänglich'
-                          : 'Nicht barrierefrei',
-                    ),
-                  _InfoRow(
-                    icon: Icons.source_outlined,
-                    label: place.source == PlaceSource.osm
-                        ? 'Quelle: OpenStreetMap'
-                        : 'Quelle: Community',
+                  // Sekundaere Details gebuendelt + standardmaessig eingeklappt;
+                  // klappt automatisch auf, wenn es eine Warnung zum Platz gibt.
+                  _MoreDetails(
+                    place: place,
+                    stats: stats,
+                    isAdmin: isAdmin,
+                    autoExpand: stats.isQuestionable || stats.locationDisputed,
                   ),
                 ],
               ),
@@ -222,31 +247,6 @@ class PlaceDetailSheet extends ConsumerWidget {
                           : () => _addPhoto(context, ref, repo),
                     ),
                   ),
-                  if (canManage) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('Bearbeiten'),
-                            onPressed: () => _edit(context),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.delete_outline),
-                            label: const Text('Löschen'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: theme.colorScheme.error,
-                            ),
-                            onPressed: () => _delete(context, ref, repo),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -662,68 +662,84 @@ class _AdminFeedback extends ConsumerWidget {
     final fb = ref.watch(adminPlaceFeedbackProvider(placeRef)).valueOrNull;
     if (fb == null || !fb.hasAny) return const SizedBox.shrink();
 
-    Widget row(IconData icon, Color color, String label, int n) => Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
-          Text('$n', style: theme.textTheme.bodySmall),
-        ],
+    // Offene, handlungsrelevante Meldungen (negativ). Bestaetigt/Bewertungen
+    // stehen bereits in _RatingSummary -> hier NICHT doppeln.
+    final open = fb.notPresent + fb.closed + fb.wrongLocation + fb.other;
+    final hasOpen = open > 0;
+
+    Widget row(IconData icon, Color color, String label, int n) {
+      if (n <= 0) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
+            Text('$n', style: theme.textTheme.bodySmall),
+          ],
+        ),
+      );
+    }
+
+    // Aufschluesselung nach Anzahl absteigend (nur Zeilen > 0 via row()).
+    final details = [
+      (Icons.block, theme.colorScheme.error, 'Nicht vorhanden', fb.notPresent),
+      (
+        Icons.lock_outline,
+        theme.colorScheme.error,
+        'Dauerhaft geschlossen',
+        fb.closed,
       ),
-    );
+      (
+        Icons.wrong_location_outlined,
+        theme.colorScheme.tertiary,
+        'Falscher Ort',
+        fb.wrongLocation,
+      ),
+      (
+        Icons.help_outline,
+        theme.colorScheme.onSurfaceVariant,
+        'Sonstiges',
+        fb.other,
+      ),
+    ]..sort((a, b) => b.$4.compareTo(a.$4));
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Meldungen (Admin, roh)',
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: hasOpen,
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          leading: Icon(
+            hasOpen ? Icons.flag : Icons.check_circle_outline,
+            size: 20,
+            color: hasOpen
+                ? theme.colorScheme.error
+                : theme.colorScheme.primary,
+          ),
+          title: Text(
+            hasOpen
+                ? 'Handlungsbedarf: $open offene Meldung${open == 1 ? '' : 'en'}'
+                : 'Keine offenen Meldungen',
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
-          row(
-            Icons.block,
-            theme.colorScheme.error,
-            'Nicht vorhanden',
-            fb.notPresent,
+          subtitle: Text(
+            'Admin: Meldungsdetails',
+            style: theme.textTheme.bodySmall,
           ),
-          row(
-            Icons.lock_outline,
-            theme.colorScheme.error,
-            'Dauerhaft geschlossen',
-            fb.closed,
-          ),
-          row(
-            Icons.wrong_location_outlined,
-            theme.colorScheme.tertiary,
-            'Falscher Ort',
-            fb.wrongLocation,
-          ),
-          if (fb.other > 0)
-            row(
-              Icons.help_outline,
-              theme.colorScheme.onSurfaceVariant,
-              'Sonstiges',
-              fb.other,
-            ),
-          row(
-            Icons.check_circle_outline,
-            theme.colorScheme.primary,
-            'Doch vorhanden',
-            fb.confirmed,
-          ),
-          row(Icons.star_outline, Colors.amber, 'Bewertungen', fb.rated),
-        ],
+          children: [for (final d in details) row(d.$1, d.$2, d.$3, d.$4)],
+        ),
       ),
     );
   }
@@ -781,6 +797,66 @@ class _MyRatingRow extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Buendelt sekundaere Platz-Details in einer standardmaessig eingeklappten
+/// ExpansionTile („Mehr Details") — reduziert die Info-Dichte im Ruhezustand.
+/// Klappt automatisch auf, wenn es eine Warnung zum Platz gibt ([autoExpand]).
+class _MoreDetails extends StatelessWidget {
+  const _MoreDetails({
+    required this.place,
+    required this.stats,
+    required this.isAdmin,
+    required this.autoExpand,
+  });
+
+  final ChangingPlace place;
+  final PlaceStats stats;
+  final bool isAdmin;
+  final bool autoExpand;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      // Divider der ExpansionTile entfernen (ruhigeres Bild).
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        initiallyExpanded: autoExpand,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        title: const Text('Mehr Details'),
+        children: [
+          _CommunityConsensus(stats: stats),
+          if (isAdmin) _AdminFeedback(placeRef: place.placeRef),
+          const SizedBox(height: 4),
+          if (place.displayLocationHint != null)
+            _InfoRow(
+              icon: Icons.place_outlined,
+              label: place.displayLocationHint!,
+            ),
+          if (place.openingHours != null)
+            _InfoRow(
+              icon: Icons.schedule,
+              label: formatOpeningHours(place.openingHours!),
+            ),
+          if (place.wheelchairAccessible != null)
+            _InfoRow(
+              icon: Icons.accessible,
+              label: place.wheelchairAccessible!
+                  ? 'Barrierefrei zugänglich'
+                  : 'Nicht barrierefrei',
+            ),
+          _InfoRow(
+            icon: Icons.source_outlined,
+            label: place.source == PlaceSource.osm
+                ? 'Quelle: OpenStreetMap'
+                : 'Quelle: Community',
+          ),
+        ],
+      ),
     );
   }
 }

@@ -19,8 +19,7 @@ class AdminDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    // Zaehler je Platz -> zu Gesamtsummen fuer die Uebersicht aufaddieren.
+    // Zaehler je Platz -> Gesamtsummen fuer die Badges auf den Zeilen.
     final counts = ref.watch(adminModerationCountsProvider).valueOrNull;
     final totalPending =
         counts?.values.fold<int>(0, (s, c) => s + c.pendingPhotos) ?? 0;
@@ -28,7 +27,7 @@ class AdminDashboardScreen extends ConsumerWidget {
         counts?.values.fold<int>(0, (s, c) => s + c.openReports) ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Verwaltung [Admin]')),
+      appBar: AppBar(title: const Text('Verwaltung')),
       body: RefreshIndicator(
         onRefresh: () async => refreshModeration(ref),
         child: ListView(
@@ -36,47 +35,8 @@ class AdminDashboardScreen extends ConsumerWidget {
             bottom: MediaQuery.viewPaddingOf(context).bottom + 16,
           ),
           children: [
-            // --- Übersicht -------------------------------------------------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Text(
-                'Übersicht',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _SummaryTile(
-                      icon: Icons.photo_library_outlined,
-                      count: totalPending,
-                      label: 'Fotos warten',
-                      urgent: totalPending > 0,
-                      color: Colors.amber.shade800,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _SummaryTile(
-                      icon: Icons.flag_outlined,
-                      count: totalReports,
-                      label: 'Meldungen',
-                      urgent: totalReports > 0,
-                      color: theme.colorScheme.error,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-
-            // --- Bereiche --------------------------------------------------
+            // Bereiche — die roten Badges auf den Zeilen tragen die Zahlen
+            // (keine separate „Übersicht", die dieselben Werte doppelt zeigt).
             _NavTile(
               icon: Icons.photo_library_outlined,
               title: 'Fotos prüfen',
@@ -111,59 +71,6 @@ class AdminDashboardScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Übersichts-Kachel mit Zahl; hebt sich hervor, wenn Handlungsbedarf besteht.
-class _SummaryTile extends StatelessWidget {
-  const _SummaryTile({
-    required this.icon,
-    required this.count,
-    required this.label,
-    required this.urgent,
-    required this.color,
-  });
-
-  final IconData icon;
-  final int count;
-  final String label;
-  final bool urgent;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tint = urgent ? color : theme.colorScheme.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: urgent
-            ? color.withValues(alpha: 0.12)
-            : theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: urgent ? Border.all(color: color) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: tint, size: 22),
-          const SizedBox(height: 6),
-          Text(
-            '$count',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: tint,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(label, style: theme.textTheme.bodySmall),
-          if (!urgent)
-            Text(
-              'nichts zu tun',
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.green),
-            ),
-        ],
       ),
     );
   }

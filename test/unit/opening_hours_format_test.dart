@@ -32,14 +32,32 @@ void main() {
     });
   });
 
-  group('formatOpeningHours — Rohtext-Fallback bei Komplexem', () {
-    test('mehrere Regeln mit Semikolon -> unverändert', () {
-      const raw = 'Mo-Fr 08:00-12:00,13:00-18:00; Sa 09:00-14:00';
-      expect(formatOpeningHours(raw), raw);
+  group('formatOpeningHours — einfache Schliess-Klausel wird übersetzt', () {
+    test('Su,PH off', () {
+      expect(
+        formatOpeningHours('Mo-Sa 10:00-18:00; Su,PH off'),
+        'Mo–Sa 10–18 Uhr · So & feiertags geschlossen',
+      );
     });
 
-    test('Feiertage PH off -> unverändert', () {
-      const raw = 'Mo-Fr 08:00-18:00; PH off';
+    test('PH off', () {
+      expect(
+        formatOpeningHours('Mo-Fr 08:00-18:00; PH off'),
+        'Mo–Fr 8–18 Uhr · feiertags geschlossen',
+      );
+    });
+
+    test('Su off', () {
+      expect(
+        formatOpeningHours('Mo-Sa 09:00-20:00; Su off'),
+        'Mo–Sa 9–20 Uhr · So geschlossen',
+      );
+    });
+  });
+
+  group('formatOpeningHours — Rohtext-Fallback bei Komplexem', () {
+    test('mehrere Zeitfenster mit Semikolon -> unverändert', () {
+      const raw = 'Mo-Fr 08:00-12:00,13:00-18:00; Sa 09:00-14:00';
       expect(formatOpeningHours(raw), raw);
     });
 
@@ -55,6 +73,11 @@ void main() {
 
     test('unbekanntes Tageskürzel -> unverändert', () {
       const raw = 'Xy-Fr 08:00-18:00';
+      expect(formatOpeningHours(raw), raw);
+    });
+
+    test('off-Klausel mit unbekanntem Token -> unverändert', () {
+      const raw = 'Mo-Fr 08:00-18:00; Xy off';
       expect(formatOpeningHours(raw), raw);
     });
 
