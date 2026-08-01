@@ -3,6 +3,16 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.23.0] — 2026-08-01
+
+### Added
+- **Filter:** Über das neue Filter-Symbol in der Suchleiste kannst du die
+  Kartenpins eingrenzen — nach Ortstyp (Supermarkt, Restaurant, Bad …),
+  Ausstattung (barrierefrei, eigener Wickelraum), Kosten (kostenlos), freier
+  Zugänglichkeit und Quelle. Ein Zähler am Symbol zeigt aktive Filter,
+  „Zurücksetzen" hebt alles auf. Plätze ohne Angabe zu einem Merkmal bleiben
+  sichtbar (verschwinden nicht fälschlich).
+
 ## [0.22.0] — 2026-08-01
 
 ### Added

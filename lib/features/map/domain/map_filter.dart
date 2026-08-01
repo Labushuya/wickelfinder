@@ -1,0 +1,108 @@
+import 'changing_place.dart';
+import 'venue_context.dart';
+
+/// Filter-Zustand fuer die Karte. Leerer Filter = alles zeigen.
+///
+/// Semantik: Ein Pin mit UNBEKANNTEM Merkmal wird EINGESCHLOSSEN (nicht
+/// weggefiltert) — sonst verschwaenden zu viele Pins, deren OSM-Tag schlicht
+/// fehlt. Nur ein explizit gegenteiliger Wert schliesst aus.
+class MapFilter {
+  const MapFilter({
+    this.venues = const {},
+    this.onlyBarrierefrei = false,
+    this.onlyFree = false,
+    this.onlyAccessible = false,
+    this.onlyOwnRoom = false,
+    this.sources = const {},
+  });
+
+  /// Erlaubte Ortstypen. Leer = alle.
+  final Set<VenueContext> venues;
+
+  /// Nur `wheelchair=yes`.
+  final bool onlyBarrierefrei;
+
+  /// Nur kostenlos (effectiveFeeMode == free).
+  final bool onlyFree;
+
+  /// Nur frei zugaenglich (kein Eintritt/Konsum: !venueContext.accessRestricted).
+  final bool onlyAccessible;
+
+  /// Nur eigener Wickelraum (changing_table:location dedicated_room/baby_care_room).
+  final bool onlyOwnRoom;
+
+  /// Erlaubte Quellen. Leer = alle.
+  final Set<PlaceSource> sources;
+
+  bool get isActive =>
+      venues.isNotEmpty ||
+      onlyBarrierefrei ||
+      onlyFree ||
+      onlyAccessible ||
+      onlyOwnRoom ||
+      sources.isNotEmpty;
+
+  /// Anzahl aktiver Kriterien (fuer das Badge am Filter-Button).
+  int get activeCount {
+    var n = 0;
+    if (venues.isNotEmpty) n++;
+    if (onlyBarrierefrei) n++;
+    if (onlyFree) n++;
+    if (onlyAccessible) n++;
+    if (onlyOwnRoom) n++;
+    if (sources.isNotEmpty) n++;
+    return n;
+  }
+
+  bool matches(ChangingPlace p) {
+    if (venues.isNotEmpty && !venues.contains(p.venueContext)) return false;
+    if (sources.isNotEmpty && !sources.contains(p.source)) return false;
+
+    // Barrierefrei: nur ausschliessen, wenn explizit == false. null bleibt drin.
+    if (onlyBarrierefrei && p.wheelchairAccessible == false) return false;
+
+    // Frei zugaenglich: Kontext ist immer gesetzt (Default unknown ist NICHT
+    // accessRestricted) -> harte Bedingung ohne Unbekannt-Fall.
+    if (onlyAccessible && p.venueContext.accessRestricted) return false;
+
+    // Kostenlos: nur ausschliessen, wenn ein GEGENTEILIGER Modus bekannt ist.
+    // Unbekannt (null) bleibt drin.
+    if (onlyFree) {
+      final mode = p.effectiveFeeMode;
+      if (mode != null && mode != FeeMode.free) return false;
+    }
+
+    // Eigener Wickelraum: locationHint kann Multi-Value sein (;/,) -> OR-Match.
+    // Unbekannt (null) bleibt drin.
+    if (onlyOwnRoom) {
+      final hint = p.locationHint;
+      if (hint != null && !_hasOwnRoomToken(hint)) return false;
+    }
+
+    return true;
+  }
+
+  static bool _hasOwnRoomToken(String hint) {
+    for (final t in hint.split(RegExp(r'[;,]'))) {
+      final v = t.trim();
+      if (v == 'dedicated_room' || v == 'baby_care_room') return true;
+    }
+    return false;
+  }
+
+  MapFilter copyWith({
+    Set<VenueContext>? venues,
+    bool? onlyBarrierefrei,
+    bool? onlyFree,
+    bool? onlyAccessible,
+    bool? onlyOwnRoom,
+    Set<PlaceSource>? sources,
+  }) => MapFilter(
+    venues: venues ?? this.venues,
+    onlyBarrierefrei: onlyBarrierefrei ?? this.onlyBarrierefrei,
+    onlyFree: onlyFree ?? this.onlyFree,
+    onlyAccessible: onlyAccessible ?? this.onlyAccessible,
+    onlyOwnRoom: onlyOwnRoom ?? this.onlyOwnRoom,
+    sources: sources ?? this.sources,
+  );
+}
