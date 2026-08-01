@@ -3,6 +3,13 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.21.1] — 2026-08-01
+
+### Fixed
+- **Zusammengesetzte Lage-Angaben** wie „female_toilet;male_toilet" werden jetzt
+  ebenfalls übersetzt („Im Damen-WC / Im Herren-WC"). Bisher wurden nur einzelne
+  Werte erkannt; mehrteilige (mit „;" oder „,") sickerten noch roh durch.
+
 ## [0.21.0] — 2026-08-01
 
 ### Fixed

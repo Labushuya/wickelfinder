@@ -72,19 +72,38 @@ class ChangingPlace {
   /// Lesbarer Lage-Hinweis: uebersetzt bekannte OSM-Enum-Werte von
   /// `changing_table:location` nach Deutsch; unbekannte Werte (inkl. echter
   /// Community-Freitext) werden unveraendert durchgereicht. null wenn kein Hinweis.
+  ///
+  /// OSM erlaubt mehrere Lagen, getrennt mit `;` oder `,`
+  /// (z. B. `female_toilet;male_toilet`) — jedes Teil wird einzeln uebersetzt
+  /// und mit „ / " verbunden; unbekannte Teile bleiben roh.
   String? get displayLocationHint {
     final h = locationHint;
     if (h == null) return null;
-    return switch (h) {
-      'wheelchair_toilet' => 'Im barrierefreien WC',
-      'dedicated_room' || 'baby_care_room' => 'Eigener Wickelraum',
-      'female_toilet' => 'Im Damen-WC',
-      'male_toilet' => 'Im Herren-WC',
-      'unisex_toilet' => 'Im Unisex-WC',
-      'bench' => 'Wickelbank',
-      _ => h,
-    };
+    // Nur splitten, wenn ein Enum-Trenner vorkommt — echter Freitext (mit
+    // Komma/Semikolon in Saetzen) wuerde sonst zerstueckelt. OSM-Enum-Tokens
+    // enthalten keine Leerzeichen; darauf pruefen wir konservativ.
+    final looksLikeEnumList = RegExp(
+      r'^[a-z_]+([;,][a-z_]+)+$',
+    ).hasMatch(h.trim());
+    if (!looksLikeEnumList) return _locationLabel(h);
+    final parts = h
+        .split(RegExp(r'[;,]'))
+        .map((p) => _locationLabel(p.trim()))
+        .toList();
+    return parts.join(' / ');
   }
+
+  /// Uebersetzt EINEN `changing_table:location`-Enum-Wert nach Deutsch;
+  /// unbekannt -> unveraendert.
+  static String _locationLabel(String v) => switch (v) {
+    'wheelchair_toilet' => 'Im barrierefreien WC',
+    'dedicated_room' || 'baby_care_room' => 'Eigener Wickelraum',
+    'female_toilet' => 'Im Damen-WC',
+    'male_toilet' => 'Im Herren-WC',
+    'unisex_toilet' => 'Im Unisex-WC',
+    'bench' => 'Wickelbank',
+    _ => v,
+  };
 
   /// Roher OSM-`opening_hours`-String (z. B. "Mo-Fr 08:00-18:00", "24/7").
   /// null = keine Angabe. Nur OSM; Community-Plaetze tragen das nicht.
