@@ -49,14 +49,22 @@ void main() {
     await tester.pumpWidget(_sheet(place));
     await tester.pump();
 
+    // Immer sichtbar: Name, Zugaenglichkeits-/Kosten-Banner, Bewertungsstatus.
     expect(find.text('Café Klein'), findsOneWidget);
-    expect(find.text('Im Erdgeschoss'), findsOneWidget);
-    expect(find.text('Barrierefrei zugänglich'), findsOneWidget);
-    // Kosten sind jetzt Teil des kombinierten Zugaenglichkeits-Banners.
+    // Kosten sind Teil des kombinierten Zugaenglichkeits-Banners.
     expect(find.textContaining('kostenlos'), findsOneWidget);
-    expect(find.text('Quelle: OpenStreetMap'), findsOneWidget);
     // Ohne konfiguriertes Backend erscheint kein Bewerten-Button.
     expect(find.text('Noch keine Bewertungen'), findsOneWidget);
+
+    // Sekundaere Infozeilen stecken jetzt in „Mehr Details" (Progressive
+    // Disclosure) — erst aufklappen, dann sind sie sichtbar.
+    expect(find.text('Im Erdgeschoss'), findsNothing);
+    await tester.tap(find.text('Mehr Details'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Im Erdgeschoss'), findsOneWidget);
+    expect(find.text('Barrierefrei zugänglich'), findsOneWidget);
+    expect(find.text('Quelle: OpenStreetMap'), findsOneWidget);
   });
 
   testWidgets('PlaceDetailSheet nutzt Fallback-Titel ohne Namen', (
