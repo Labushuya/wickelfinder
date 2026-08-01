@@ -157,7 +157,7 @@ class _NearbyPlacesScreenState extends ConsumerState<NearbyPlacesScreen> {
                         ),
                         title: Text(p.name ?? 'Wickelplatz'),
                         subtitle: Text(
-                          p.locationHint ??
+                          p.displayLocationHint ??
                               (p.source == PlaceSource.community
                                   ? 'Community'
                                   : 'OpenStreetMap'),

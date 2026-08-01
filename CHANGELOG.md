@@ -3,6 +3,29 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.21.0] — 2026-08-01
+
+### Fixed
+- **Kryptische Lage-Angaben behoben:** OSM-Werte wie „wheelchair_toilet" werden
+  jetzt in lesbares Deutsch übersetzt („Im barrierefreien WC", „Eigener
+  Wickelraum", „Im Damen-/Herren-/Unisex-WC", „Wickelbank"). Echter
+  Community-Freitext bleibt unverändert.
+- **Öffnungszeiten lesbarer:** gängige Zusätze wie „Su,PH off" werden übersetzt
+  („… · So & feiertags geschlossen"). Ungewöhnliches weiterhin im Original.
+
+### Changed
+- **Übersichtlichere Platz-Ansicht:** Nur noch das Wichtigste ist sofort zu
+  sehen (Name, Fotos, Bewertung, Zugang/Kosten). Weitere Details (Lage,
+  Öffnungszeiten, Barrierefreiheit, Quelle) stecken in einem aufklappbaren
+  „Mehr Details" — das sich bei Warnungen automatisch öffnet.
+- Bearbeiten/Löschen eines Platzes sind ins **3-Punkt-Menü** oben in die Ansicht
+  gewandert (weniger Buttons, ruhigeres Bild).
+- **Admin-Ansichten aufgeräumt:** gemeldete Inhalte zeigen jetzt den **Platznamen**
+  statt einer internen ID; die Meldungs-Übersicht ist als ein Statuspunkt mit
+  aufklappbaren Details zusammengefasst; „Meldung verwerfen" ist nicht mehr grün
+  (missverständlich); Foto-Ablehnen fragt jetzt nach; doppelte Zähler und
+  „[Admin]"-Zusätze entfernt.
+
 ## [0.20.0] — 2026-07-24
 
 ### Added

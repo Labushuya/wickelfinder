@@ -32,7 +32,7 @@ bool pinMatchesQuery(ChangingPlace p, String query) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return true;
   final name = (p.name ?? '').toLowerCase();
-  final hint = (p.locationHint ?? '').toLowerCase();
+  final hint = (p.displayLocationHint ?? '').toLowerCase();
   return name.contains(q) || hint.contains(q);
 }
 
@@ -54,7 +54,7 @@ class PlaceTile extends ConsumerWidget {
       leading: const Icon(Icons.location_on),
       title: Text(place.name ?? 'Wickelplatz'),
       subtitle: Text(
-        place.locationHint ??
+        place.displayLocationHint ??
             '${place.location.latitude.toStringAsFixed(4)}, '
                 '${place.location.longitude.toStringAsFixed(4)}',
       ),

@@ -22,7 +22,7 @@ class _AllPlacesScreenState extends ConsumerState<AllPlacesScreen> {
     final async = ref.watch(adminAllPlacesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Alle Pins [Admin]')),
+      appBar: AppBar(title: const Text('Alle Pins')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) =>

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/bottom_toast.dart';
+import '../../map/domain/changing_place.dart';
 import '../data/community_repository.dart';
+import 'accumulated_places.dart';
 import 'community_providers.dart';
 
 /// Admin-Screen zur Foto-Freigabe: listet wartende Fotos mit Vorschau und
@@ -15,8 +17,9 @@ class PhotoReviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(adminPendingPhotosProvider);
+    final byRef = ref.watch(accumulatedPlacesProvider).byRef;
     return Scaffold(
-      appBar: AppBar(title: const Text('Fotos prüfen [Admin]')),
+      appBar: AppBar(title: const Text('Fotos prüfen')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) =>
@@ -72,8 +75,8 @@ class PhotoReviewScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        p.placeRef,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        _placeHeading(byRef[p.placeRef], p.placeRef),
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -119,6 +122,29 @@ class PhotoReviewScreen extends ConsumerWidget {
     String photoId,
     bool approve,
   ) async {
+    // Ablehnen ist folgenreich (Foto verschwindet) -> Rueckfrage (App-Muster).
+    if (!approve) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Foto ablehnen?'),
+          content: const Text(
+            'Das Foto wird abgelehnt und nicht veröffentlicht.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Ablehnen'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
     final repo = ref.read(communityRepositoryProvider);
     if (repo == null) return;
     try {
@@ -137,4 +163,16 @@ class PhotoReviewScreen extends ConsumerWidget {
       if (context.mounted) showBottomToast(context, 'Aktion fehlgeschlagen.');
     }
   }
+}
+
+/// Lesbarer Kopf für einen place_ref: Name (+ Lage) statt interner ID.
+/// Fällt auf einen generischen Text zurück, wenn der Platz (noch) nicht geladen
+/// ist — die rohe ID zeigen wir dem Admin nicht als Hauptzeile.
+String _placeHeading(ChangingPlace? place, String rawRef) {
+  if (place == null) {
+    return rawRef.startsWith('community/') ? 'Community-Platz' : 'OSM-Platz';
+  }
+  final name = place.name ?? 'Wickelplatz';
+  final hint = place.displayLocationHint;
+  return hint == null ? name : '$name — $hint';
 }
