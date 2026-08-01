@@ -3,6 +3,14 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.24.1] — 2026-08-01
+
+### Changed
+- **Filter-Sheet klarer:** Unten gibt es jetzt einen festen „Fertig"-Button
+  (zeigt, wie viele Filter aktiv sind) und den Hinweis „Die Auswahl wird sofort
+  übernommen". So ist klar, dass Filter direkt greifen und beim Schließen
+  (auch per Zurück) nichts verloren geht.
+
 ## [0.24.0] — 2026-08-01
 
 ### Added
