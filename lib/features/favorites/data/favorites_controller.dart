@@ -27,8 +27,8 @@ class FavoritesController extends Notifier<List<FavoritePlace>> {
     if (raw == null) return;
     try {
       final list = (jsonDecode(raw) as List)
-          .whereType<Map>()
-          .map((m) => FavoritePlace.fromJson(m.cast<String, dynamic>()))
+          .whereType<Map<String, dynamic>>()
+          .map(FavoritePlace.fromJson)
           .whereType<FavoritePlace>()
           .toList();
       state = list;
