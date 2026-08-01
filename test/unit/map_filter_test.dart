@@ -90,12 +90,12 @@ void main() {
 
   group('MapFilter — Ortstyp & Quelle', () {
     test('Ortstyp-Menge', () {
-      final f = MapFilter(venues: {VenueContext.supermarket});
+      const f = MapFilter(venues: {VenueContext.supermarket});
       expect(f.matches(_p(venue: VenueContext.supermarket)), isTrue);
       expect(f.matches(_p(venue: VenueContext.restaurant)), isFalse);
     });
     test('Quelle', () {
-      final f = MapFilter(sources: {PlaceSource.community});
+      const f = MapFilter(sources: {PlaceSource.community});
       expect(f.matches(_p(source: PlaceSource.community)), isTrue);
       expect(f.matches(_p(source: PlaceSource.osm)), isFalse);
     });
