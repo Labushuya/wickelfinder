@@ -49,16 +49,17 @@ class MapFilter {
       onlyOpenNow ||
       sources.isNotEmpty;
 
-  /// Anzahl aktiver Kriterien (fuer das Badge am Filter-Button).
+  /// Anzahl aktiver Einzel-Auswahlen (jedes gewählte Element + jeder Schalter).
+  /// Beispiel: 3 Ortstypen + „Kostenlos" = 4.
   int get activeCount {
     var n = 0;
-    if (venues.isNotEmpty) n++;
+    n += venues.length;
+    n += sources.length;
     if (onlyBarrierefrei) n++;
     if (onlyFree) n++;
     if (onlyAccessible) n++;
     if (onlyOwnRoom) n++;
     if (onlyOpenNow) n++;
-    if (sources.isNotEmpty) n++;
     return n;
   }
 

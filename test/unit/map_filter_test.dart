@@ -103,10 +103,30 @@ void main() {
     });
   });
 
-  test('activeCount zählt gesetzte Kriterien', () {
-    const f = MapFilter(onlyFree: true, onlyBarrierefrei: true);
-    expect(f.activeCount, 2);
-    expect(f.isActive, isTrue);
+  group('activeCount — zählt einzelne Auswahlen', () {
+    test('nur Schalter', () {
+      const f = MapFilter(onlyFree: true, onlyBarrierefrei: true);
+      expect(f.activeCount, 2);
+      expect(f.isActive, isTrue);
+    });
+    test('Ortstypen zählen einzeln (nicht als 1 Kategorie)', () {
+      const f = MapFilter(
+        venues: {VenueContext.supermarket, VenueContext.restaurant},
+      );
+      expect(f.activeCount, 2);
+    });
+    test('kombiniert: Ortstypen + Quelle + Schalter', () {
+      const f = MapFilter(
+        venues: {VenueContext.supermarket, VenueContext.mall},
+        sources: {PlaceSource.community},
+        onlyFree: true,
+      );
+      // 2 Ortstypen + 1 Quelle + 1 Schalter
+      expect(f.activeCount, 4);
+    });
+    test('leer -> 0', () {
+      expect(const MapFilter().activeCount, 0);
+    });
   });
 
   group('MapFilter — Nur jetzt geöffnet (Einschließen-Semantik)', () {
