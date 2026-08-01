@@ -40,6 +40,22 @@ void main() {
       );
     });
 
+    test('zusammengesetzte Enum-Liste (; oder ,) wird je Teil übersetzt', () {
+      expect(
+        _place('female_toilet;male_toilet').displayLocationHint,
+        'Im Damen-WC / Im Herren-WC',
+      );
+      expect(
+        _place('female_toilet,male_toilet').displayLocationHint,
+        'Im Damen-WC / Im Herren-WC',
+      );
+      // Unbekanntes Teil bleibt roh, bekanntes wird übersetzt.
+      expect(
+        _place('wheelchair_toilet;irgendwas').displayLocationHint,
+        'Im barrierefreien WC / irgendwas',
+      );
+    });
+
     test('null bleibt null', () {
       expect(_place(null).displayLocationHint, isNull);
     });
