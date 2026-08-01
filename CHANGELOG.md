@@ -3,13 +3,20 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.24.2] — 2026-08-01
+
+### Changed
+- **Filter greifen erst mit „Übernehmen".** Die Auswahl im Filter-Sheet ist jetzt
+  ein Entwurf: Die Karte ändert sich erst, wenn du unten auf **Übernehmen** tippst.
+  **Abbrechen**, Zurück oder Wegwischen verwerfen die Änderung — der zuvor aktive
+  Filter bleibt unangetastet. (Vorher wurde jede Auswahl sofort wirksam, was beim
+  Verlassen per Zurück verwirrte.)
+
 ## [0.24.1] — 2026-08-01
 
 ### Changed
-- **Filter-Sheet klarer:** Unten gibt es jetzt einen festen „Fertig"-Button
-  (zeigt, wie viele Filter aktiv sind) und den Hinweis „Die Auswahl wird sofort
-  übernommen". So ist klar, dass Filter direkt greifen und beim Schließen
-  (auch per Zurück) nichts verloren geht.
+- **Filter-Sheet:** Fester Fuß-Bereich mit Aktions-Button und Filter-Zähler
+  eingeführt. (In v0.24.2 zum verbindlichen „Übernehmen"/„Abbrechen" ausgebaut.)
 
 ## [0.24.0] — 2026-08-01
 
