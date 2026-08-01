@@ -27,8 +27,10 @@ import '../../search/presentation/address_search_bar.dart';
 import '../../updater/presentation/update_sheet.dart';
 import '../domain/changing_place.dart';
 import 'hold_to_label_fab.dart';
+import 'map_filter_provider.dart';
 import 'map_providers.dart';
 import 'place_detail_sheet.dart';
+import 'filter_sheet.dart';
 
 /// Farbmatrix fuer den Dark-Mode der Karte: Invert × Hue-Rotate(180°).
 /// Kehrt Helligkeit um (weiss->dunkel), erhaelt aber Farbtoene grob
@@ -117,6 +119,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     // Loading-Banner NUR fuer den echten OSM-Netzcall (togglet nicht dauernd).
     final loading = ref.watch(placesProvider(_bbox)).isLoading;
     final accumulated = ref.watch(accumulatedPlacesProvider);
+    final filter = ref.watch(mapFilterProvider);
     final hasBackend = ref.watch(communityRepositoryProvider) != null;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -166,7 +169,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
               // aufrecht (wie Google Maps), waehrend die Karte rotierbar ist.
               MarkerLayer(
                 rotate: true,
-                markers: _buildMarkers(accumulated.all),
+                markers: _buildMarkers(
+                  accumulated.all.where(filter.matches).toList(),
+                ),
               ),
             ],
           ),
@@ -184,6 +189,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
                       onSelected: _goTo,
                       trailing: _buildMenu(hasBackend, isAdmin, isLoggedIn),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterButton(
+                    activeCount: filter.activeCount,
+                    onTap: _showFilterSheet,
                   ),
                   const SizedBox(width: 8),
                   _ThemeToggleButton(),
@@ -675,6 +685,81 @@ class _MapScreenState extends ConsumerState<MapScreen>
               },
             ),
             const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showFilterSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => const FilterSheet(),
+    );
+  }
+}
+
+/// Filter-Button mit Zaehler-Badge (neben der Suchleiste). Zeigt an, ob und wie
+/// viele Filter aktiv sind.
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({required this.activeCount, required this.onTap});
+  final int activeCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final active = activeCount > 0;
+    return Material(
+      elevation: 3,
+      shape: const CircleBorder(),
+      color: theme.colorScheme.surface,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              iconSize: 23,
+              padding: EdgeInsets.zero,
+              tooltip: 'Filter',
+              icon: Icon(
+                active ? Icons.filter_list : Icons.filter_list_outlined,
+              ),
+              color: active
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+              onPressed: onTap,
+            ),
+            if (active)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    '$activeCount',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
