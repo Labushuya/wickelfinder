@@ -25,6 +25,7 @@ class MapFilterController extends Notifier<MapFilter> {
   void setFree(bool v) => state = state.copyWith(onlyFree: v);
   void setAccessible(bool v) => state = state.copyWith(onlyAccessible: v);
   void setOwnRoom(bool v) => state = state.copyWith(onlyOwnRoom: v);
+  void setOpenNow(bool v) => state = state.copyWith(onlyOpenNow: v);
 
   void clear() => state = const MapFilter();
 }

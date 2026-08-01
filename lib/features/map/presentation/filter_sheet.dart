@@ -64,8 +64,24 @@ class FilterSheet extends ConsumerWidget {
                   selected: filter.onlyOwnRoom,
                   onSelected: ctrl.setOwnRoom,
                 ),
+                FilterChip(
+                  label: const Text('Jetzt geöffnet'),
+                  selected: filter.onlyOpenNow,
+                  onSelected: ctrl.setOpenNow,
+                ),
               ],
             ),
+            if (filter.onlyOpenNow)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Feiertage werden nicht berücksichtigt. Plätze ohne '
+                  'Zeitangabe bleiben sichtbar.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
 
             _label(theme, 'Ortstyp'),

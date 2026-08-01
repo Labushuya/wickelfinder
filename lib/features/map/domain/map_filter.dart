@@ -1,4 +1,5 @@
 import 'changing_place.dart';
+import 'opening_hours_status.dart';
 import 'venue_context.dart';
 
 /// Filter-Zustand fuer die Karte. Leerer Filter = alles zeigen.
@@ -13,6 +14,7 @@ class MapFilter {
     this.onlyFree = false,
     this.onlyAccessible = false,
     this.onlyOwnRoom = false,
+    this.onlyOpenNow = false,
     this.sources = const {},
   });
 
@@ -31,6 +33,10 @@ class MapFilter {
   /// Nur eigener Wickelraum (changing_table:location dedicated_room/baby_care_room).
   final bool onlyOwnRoom;
 
+  /// Nur aktuell geöffnet (nach OSM opening_hours). Braucht die aktuelle Zeit
+  /// beim Matchen; unbekannte/komplexe Zeiten bleiben eingeschlossen.
+  final bool onlyOpenNow;
+
   /// Erlaubte Quellen. Leer = alle.
   final Set<PlaceSource> sources;
 
@@ -40,6 +46,7 @@ class MapFilter {
       onlyFree ||
       onlyAccessible ||
       onlyOwnRoom ||
+      onlyOpenNow ||
       sources.isNotEmpty;
 
   /// Anzahl aktiver Kriterien (fuer das Badge am Filter-Button).
@@ -50,11 +57,14 @@ class MapFilter {
     if (onlyFree) n++;
     if (onlyAccessible) n++;
     if (onlyOwnRoom) n++;
+    if (onlyOpenNow) n++;
     if (sources.isNotEmpty) n++;
     return n;
   }
 
-  bool matches(ChangingPlace p) {
+  /// [now] wird nur fuer das „jetzt geöffnet"-Kriterium benoetigt. Ohne [now]
+  /// bleibt dieses Kriterium wirkungslos (schliesst nichts aus).
+  bool matches(ChangingPlace p, {DateTime? now}) {
     if (venues.isNotEmpty && !venues.contains(p.venueContext)) return false;
     if (sources.isNotEmpty && !sources.contains(p.source)) return false;
 
@@ -79,6 +89,13 @@ class MapFilter {
       if (hint != null && !_hasOwnRoomToken(hint)) return false;
     }
 
+    // Jetzt geöffnet: nur AUSSCHLIESSEN, wenn sicher „geschlossen". Unbekannte/
+    // komplexe Zeiten und Pins ohne Zeiten bleiben eingeschlossen.
+    if (onlyOpenNow && now != null) {
+      final oh = p.openingHours;
+      if (oh != null && openStateAt(oh, now) == OpenState.closed) return false;
+    }
+
     return true;
   }
 
@@ -96,6 +113,7 @@ class MapFilter {
     bool? onlyFree,
     bool? onlyAccessible,
     bool? onlyOwnRoom,
+    bool? onlyOpenNow,
     Set<PlaceSource>? sources,
   }) => MapFilter(
     venues: venues ?? this.venues,
@@ -103,6 +121,7 @@ class MapFilter {
     onlyFree: onlyFree ?? this.onlyFree,
     onlyAccessible: onlyAccessible ?? this.onlyAccessible,
     onlyOwnRoom: onlyOwnRoom ?? this.onlyOwnRoom,
+    onlyOpenNow: onlyOpenNow ?? this.onlyOpenNow,
     sources: sources ?? this.sources,
   );
 }

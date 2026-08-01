@@ -20,6 +20,7 @@ import '../../favorites/data/favorites_controller.dart';
 import '../../favorites/domain/favorite_place.dart';
 import '../domain/changing_place.dart';
 import '../domain/opening_hours_format.dart';
+import '../domain/opening_hours_status.dart';
 
 /// Bottom-Sheet mit Details zu einem Wickelplatz inkl. Community-Bewertung.
 class PlaceDetailSheet extends ConsumerWidget {
@@ -888,6 +889,8 @@ class _MoreDetails extends StatelessWidget {
               icon: Icons.schedule,
               label: formatOpeningHours(place.openingHours!),
             ),
+          if (place.openingHours != null)
+            _OpenNowBadge(openingHours: place.openingHours!),
           if (place.wheelchairAccessible != null)
             _InfoRow(
               icon: Icons.accessible,
@@ -900,6 +903,43 @@ class _MoreDetails extends StatelessWidget {
             label: place.source == PlaceSource.osm
                 ? 'Quelle: OpenStreetMap'
                 : 'Quelle: Community',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dezentes „jetzt geöffnet"-Badge unter den Öffnungszeiten. Zeigt NUR bei
+/// sicherem Ergebnis (offen/geschlossen) etwas an; bei unbekannt/komplex nichts
+/// (keine Falschaussage). Feiertage werden nicht beruecksichtigt.
+class _OpenNowBadge extends StatelessWidget {
+  const _OpenNowBadge({required this.openingHours});
+  final String openingHours;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = openStateAt(openingHours, DateTime.now());
+    if (state == OpenState.unknown) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final open = state == OpenState.open;
+    final color = open ? Colors.green.shade700 : theme.colorScheme.error;
+    return Padding(
+      padding: const EdgeInsets.only(left: 32, top: 2, bottom: 2),
+      child: Row(
+        children: [
+          Icon(
+            open ? Icons.check_circle : Icons.cancel,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            open ? 'Jetzt geöffnet' : 'Jetzt geschlossen',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
