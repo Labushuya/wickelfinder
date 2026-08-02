@@ -12,6 +12,18 @@ Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
   **Betrifft nur die Server-Funktion — kein App-Update nötig, aber Deploy
   erforderlich:** `supabase functions deploy delete-account`.
 
+## [0.24.6] — 2026-08-02
+
+### Fixed
+- **Favoriten:** Ein sehr früh (direkt nach App-Start) gesetzter Favorit geht
+  nicht mehr verloren, falls das Laden der gespeicherten Favoriten noch läuft.
+- **„Meine Bewertungen":** Bei einem echten Verbindungsfehler erscheint jetzt
+  „konnte nicht geladen werden" statt fälschlich „keine Bewertungen".
+
+### Internal
+- Regressions-Tests ergänzt (Pin-Akkumulator: Dedup/Deckel/Reconcile,
+  Foto-Freigabe-Modell, Favoriten-Race).
+
 ## [0.24.5] — 2026-08-02
 
 ### Fixed

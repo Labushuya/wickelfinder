@@ -258,18 +258,15 @@ class CommunityRepository {
       return [for (final row in rows) _entryFromRow(row, withCoords: true)];
     } on PostgrestException {
       // Wahrscheinlich fehlen lat/lon (Migration 0017 noch nicht ausgefuehrt)
-      // -> ohne Koordinaten erneut versuchen.
-      try {
-        final rows = await _client
-            .from('ratings')
-            .select('place_ref, stars, tags')
-            .order('updated_at', ascending: false);
-        return [for (final row in rows) _entryFromRow(row, withCoords: false)];
-      } catch (_) {
-        return const [];
-      }
-    } catch (_) {
-      return const [];
+      // -> ohne Koordinaten erneut versuchen. Schlaegt AUCH das mit einem
+      // Schema-Fehler fehl, leere Liste; echte Netzfehler NICHT hier schlucken
+      // (die propagieren -> Provider .error -> Screen zeigt "konnte nicht
+      // geladen werden" statt faelschlich "keine Bewertungen").
+      final rows = await _client
+          .from('ratings')
+          .select('place_ref, stars, tags')
+          .order('updated_at', ascending: false);
+      return [for (final row in rows) _entryFromRow(row, withCoords: false)];
     }
   }
 

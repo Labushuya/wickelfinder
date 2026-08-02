@@ -14,18 +14,19 @@ import '../domain/favorite_place.dart';
 class FavoritesController extends Notifier<List<FavoritePlace>> {
   static const _key = 'favorites';
   SharedPreferences? _prefs;
+  late final Future<void> _loaded;
 
   @override
   List<FavoritePlace> build() {
-    _load();
+    _loaded = _load();
     return const [];
   }
 
   Future<void> _load() async {
-    _prefs = await SharedPreferences.getInstance();
-    final raw = _prefs?.getString(_key);
-    if (raw == null) return;
     try {
+      _prefs = await SharedPreferences.getInstance();
+      final raw = _prefs?.getString(_key);
+      if (raw == null) return;
       final list = (jsonDecode(raw) as List)
           .whereType<Map<String, dynamic>>()
           .map(FavoritePlace.fromJson)
@@ -33,7 +34,9 @@ class FavoritesController extends Notifier<List<FavoritePlace>> {
           .toList();
       state = list;
     } catch (_) {
-      // Beschaedigter Eintrag -> ignorieren (Default bleibt leer).
+      // Beschaedigter Eintrag ODER Plattform-/Kanal-Fehler -> leer bleiben.
+      // Wichtig: _load darf NIE mit Fehler abschliessen, sonst wuerde ein
+      // fruehes `await _loaded` in toggle() rethrowen.
     }
   }
 
@@ -41,7 +44,11 @@ class FavoritesController extends Notifier<List<FavoritePlace>> {
 
   /// Fuegt hinzu (falls neu) oder entfernt (falls vorhanden). Gibt zurueck, ob
   /// der Platz danach favorisiert ist (fuer die Toast-Meldung).
+  ///
+  /// Wartet erst den initialen [_load] ab, damit ein sehr fruehes Toggle nicht
+  /// vom nachlaufenden Laden ueberschrieben wird (Race).
   Future<bool> toggle(FavoritePlace fav) async {
+    await _loaded;
     final exists = isFavorite(fav.placeRef);
     state = exists
         ? state.where((f) => f.placeRef != fav.placeRef).toList()
