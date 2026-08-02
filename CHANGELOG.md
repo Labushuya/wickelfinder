@@ -3,6 +3,15 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [Unveröffentlicht] — Server (Edge Function)
+
+### Fixed (DSGVO)
+- **Konto-Löschung entfernt jetzt ALLE Fotos**, auch bei mehr als 1000 Ordnern
+  oder Dateien (vollständige Pagination beim Storage-Sweep). Löschungen laufen
+  in kleinen Chunks, ein fehlgeschlagener Chunk stoppt die übrigen nicht mehr.
+  **Betrifft nur die Server-Funktion — kein App-Update nötig, aber Deploy
+  erforderlich:** `supabase functions deploy delete-account`.
+
 ## [0.24.5] — 2026-08-02
 
 ### Fixed
