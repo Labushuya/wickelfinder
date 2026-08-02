@@ -114,5 +114,19 @@ void main() {
       await _settle();
       expect(c.read(favoritesProvider.notifier).isFavorite('node/9'), isTrue);
     });
+
+    test('sehr frühes toggle überlebt das nachlaufende _load (kein Race)', () async {
+      // Speicher enthält bereits node/1; sofort (vor Load-Abschluss) togglen wir
+      // node/2 dazu. toggle() wartet _loaded ab -> node/1 UND node/2 im state.
+      SharedPreferences.setMockInitialValues({
+        'favorites': jsonEncode([_fav('node/1').toJson()]),
+      });
+      final c = makeContainer();
+      final ctrl = c.read(favoritesProvider.notifier);
+      // KEIN _settle() vorher -> toggle läuft, während _load() noch nicht fertig ist.
+      await ctrl.toggle(_fav('node/2'));
+      expect(ctrl.isFavorite('node/1'), isTrue); // vom Load nicht verloren
+      expect(ctrl.isFavorite('node/2'), isTrue); // frisch getoggelt
+    });
   });
 }
