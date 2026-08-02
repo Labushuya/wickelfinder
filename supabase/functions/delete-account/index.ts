@@ -81,24 +81,55 @@ Deno.serve(async (req) => {
   // 2b) Foto-Objekte im Storage entfernen (SQL kann das nicht -> DSGVO Art. 17).
   // Alle Objekte des Nutzers liegen unter dem Prefix "<uid>/" im Bucket
   // 'place-photos' (Pfad <uid>/<place_slug>/<uuid>.jpg). Rekursiv einsammeln
-  // und loeschen. Fehler hier sind nicht fatal fuer die Kontoloeschung, werden
-  // aber protokolliert (Rest-Objekte faengt spaeter ein Sweep ab).
+  // und loeschen — VOLLSTAENDIG paginiert (list() liefert max. pageSize pro
+  // Aufruf), damit bei >1000 Ordnern/Dateien nichts zurueckbleibt (Art. 17).
+  // Fehler hier sind nicht fatal fuer die Kontoloeschung, werden protokolliert.
+  const PAGE = 1000; // list()-Seitengroesse (Server akzeptiert bis 1000)
+  const REMOVE_CHUNK = 100; // defensiv < server DELETE_OBJECTS_LIMIT
+
+  // Laedt ALLE Eintraege eines Prefix ueber offset-Pagination.
+  async function listAll(
+    bucket: ReturnType<typeof admin.storage.from>,
+    prefix: string,
+  ): Promise<Array<{ name: string; id: string | null }>> {
+    const out: Array<{ name: string; id: string | null }> = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await bucket.list(prefix, {
+        limit: PAGE,
+        offset,
+      });
+      if (error) throw error;
+      const batch = data ?? [];
+      out.push(...batch.map((e) => ({ name: e.name, id: e.id })));
+      if (batch.length < PAGE) break; // letzte Seite erreicht
+    }
+    return out;
+  }
+
   try {
     const bucket = admin.storage.from('place-photos');
     const toRemove: string[] = [];
-    // list() ist nicht rekursiv -> pro Unterordner nachladen.
-    const { data: subdirs } = await bucket.list(userId, { limit: 1000 });
-    for (const entry of subdirs ?? []) {
+    // list() ist nicht rekursiv -> pro Unterordner nachladen (jeweils paginiert).
+    const subdirs = await listAll(bucket, userId);
+    for (const entry of subdirs) {
       // Ein Eintrag ohne id ist ein "Ordner" (place_slug) -> dessen Dateien holen.
-      const { data: files } = await bucket.list(`${userId}/${entry.name}`, { limit: 1000 });
-      for (const f of files ?? []) {
+      const files = await listAll(bucket, `${userId}/${entry.name}`);
+      for (const f of files) {
         if (f.name) toRemove.push(`${userId}/${entry.name}/${f.name}`);
       }
       // Falls direkt Dateien unter <uid>/ liegen (Fallback).
       if (entry.id) toRemove.push(`${userId}/${entry.name}`);
     }
-    if (toRemove.length > 0) {
-      await bucket.remove(toRemove);
+    // remove() in kleinen Chunks (defensiv unter dem server DELETE_OBJECTS_LIMIT).
+    // Jeden Chunk EINZELN fangen -> ein fehlgeschlagener Chunk stoppt nicht die
+    // restlichen Loeschungen (sonst blieben Fotos liegen -> Art. 17 unvollstaendig).
+    for (let i = 0; i < toRemove.length; i += REMOVE_CHUNK) {
+      const chunk = toRemove.slice(i, i + REMOVE_CHUNK);
+      try {
+        await bucket.remove(chunk);
+      } catch (e) {
+        console.error('storage remove chunk failed (non-fatal):', e);
+      }
     }
   } catch (e) {
     console.error('storage sweep failed (non-fatal):', e);
