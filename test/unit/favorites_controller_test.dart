@@ -73,6 +73,7 @@ void main() {
       ]);
       SharedPreferences.setMockInitialValues({'favorites': stored});
       final c = makeContainer();
+      c.read(favoritesProvider); // Provider instanziieren -> _load() startet
       await _settle();
       final list = c.read(favoritesProvider);
       expect(list.length, 2);
@@ -85,6 +86,7 @@ void main() {
     test('beschädigter Speicher -> leer, kein Absturz', () async {
       SharedPreferences.setMockInitialValues({'favorites': 'kein-json{'});
       final c = makeContainer();
+      c.read(favoritesProvider); // Provider instanziieren -> _load() startet
       await _settle();
       expect(c.read(favoritesProvider), isEmpty);
     });
