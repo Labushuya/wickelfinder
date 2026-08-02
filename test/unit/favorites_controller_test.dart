@@ -91,17 +91,28 @@ void main() {
       expect(c.read(favoritesProvider), isEmpty);
     });
 
-    test('persistiert über einen neuen Container hinweg', () async {
+    test('toggle schreibt in den persistenten Speicher', () async {
       SharedPreferences.setMockInitialValues({});
-      final c1 = makeContainer();
-      final ctrl1 = c1.read(favoritesProvider.notifier);
-      await _settle(); // erst _load() abwarten, dann schreiben (kein Race)
-      await ctrl1.toggle(_fav('node/9'));
-
-      // Neuer Container liest denselben (gemockten) Speicher.
-      final c2 = makeContainer();
+      final c = makeContainer();
+      final ctrl = c.read(favoritesProvider.notifier);
       await _settle();
-      expect(c2.read(favoritesProvider.notifier).isFavorite('node/9'), isTrue);
+      await ctrl.toggle(_fav('node/9'));
+
+      // Direkt im (gemockten) Speicher prüfen, dass persistiert wurde.
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('favorites');
+      expect(raw, isNotNull);
+      expect(raw, contains('node/9'));
+    });
+
+    test('liest den persistenten Speicher in eine neue Instanz', () async {
+      SharedPreferences.setMockInitialValues({
+        'favorites': jsonEncode([_fav('node/9').toJson()]),
+      });
+      final c = makeContainer();
+      c.read(favoritesProvider); // Provider instanziieren -> _load() startet
+      await _settle();
+      expect(c.read(favoritesProvider.notifier).isFavorite('node/9'), isTrue);
     });
   });
 }
