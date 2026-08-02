@@ -146,10 +146,18 @@ void main() {
         isFalse,
       );
     });
-    test('unbekannte Zeiten (komplex) -> drin', () {
+    test('unbekannte Zeiten (komplex/Saison) -> drin', () {
+      // Saison-Syntax bleibt unknown -> Einschließen-Semantik greift.
+      expect(
+        f.matches(_p(openingHours: 'Apr-Oct: Mo-Su 09:00-19:00'), now: tue19),
+        isTrue,
+      );
+    });
+    test('PH-Off-Klausel: Werktag abends geschlossen -> raus', () {
+      // PH wird ignoriert, Werktag ist auswertbar -> Di 19:00 = geschlossen.
       expect(
         f.matches(_p(openingHours: 'Mo-Fr 08:00-18:00; PH off'), now: tue19),
-        isTrue,
+        isFalse,
       );
     });
     test('keine Zeitangabe -> drin', () {
