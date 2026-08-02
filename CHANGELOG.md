@@ -3,6 +3,13 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.24.4] — 2026-08-02
+
+### Fixed
+- **„Übernehmen"-Button lesbar:** Das Wort „Übernehmen" bleibt jetzt immer voll
+  sichtbar; die Filter-Anzahl steht als eigenes Badge daneben (wird nie
+  abgeschnitten). Zuvor konnte bei mehrstelliger Zahl „Übernehmen …" erscheinen.
+
 ## [0.24.3] — 2026-08-01
 
 ### Fixed
