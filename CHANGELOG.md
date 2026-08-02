@@ -3,6 +3,24 @@
 Alle nennenswerten Änderungen an Wickelfinder. Format lose angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/), Versionierung nach SemVer.
 
+## [0.24.5] — 2026-08-02
+
+### Fixed
+- **Robuster gegen fehlerhafte Daten:** Ein einzelner Platz mit fehlenden
+  Koordinaten lässt nicht mehr die gesamte Community-Pin-Ebene verschwinden —
+  nur die kaputte Zeile wird übersprungen.
+- **„Jetzt geöffnet" genauer:** Öffnungszeiten wie „Mo-Fr 08:00-18:00; PH off"
+  (feiertags geschlossen) werden werktags jetzt korrekt als offen/geschlossen
+  erkannt statt als „unbekannt".
+- **Fotos laden sparsamer:** stabiler Bild-Cache (kein erneuter Download bei
+  jedem Öffnen) — schont Datenvolumen und funktioniert offline.
+- **Datenschutz:** Fehlermeldungen bei der Registrierung enthalten keine
+  technischen Details/Daten mehr; interne Logs nur noch in Testbuilds.
+
+### Internal
+- Regressions-Tests ergänzt (Favoriten-Speicher, Öffnungszeiten-Status,
+  Filter-Zähler).
+
 ## [0.24.4] — 2026-08-02
 
 ### Fixed

@@ -128,15 +128,17 @@ Set<int>? _parseDays(String expr) {
 }
 
 /// Parst eine Schliess-Klausel "Su,PH off" / "Su off" zu den geschlossenen
-/// weekday-Nummern. Gibt null zurueck, wenn PH/SH enthalten sind oder die
-/// Klausel nicht sicher parsbar ist (-> Aufrufer wertet als unknown).
+/// weekday-Nummern. `PH`/`SH` (Feiertage/Ferien) werden UEBERSPRUNGEN — wir
+/// kennen keinen Kalender, aber der Werktags-Status bleibt dadurch auswertbar
+/// (z.B. "Mo-Fr 08:00-18:00; PH off" ist Mo–Fr klar offen). Gibt null zurueck,
+/// wenn die Klausel selbst nicht sauber parsbar ist (-> Aufrufer: unknown).
 Set<int>? _parseOffClause(String tail) {
   final m = RegExp(r'^([A-Za-z,]+)\s+off$').firstMatch(tail);
   if (m == null) return null;
   final tokens = m.group(1)!.split(',');
   final out = <int>{};
   for (final t in tokens) {
-    if (t == 'PH' || t == 'SH') return null; // kein Kalender -> unknown
+    if (t == 'PH' || t == 'SH') continue; // kein Kalender -> ignorieren
     final n = _dayNum[t];
     if (n == null) return null;
     out.add(n);

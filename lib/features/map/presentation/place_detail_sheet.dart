@@ -1304,6 +1304,10 @@ class _PhotoStrip extends ConsumerWidget {
                   children: [
                     CachedNetworkImage(
                       imageUrl: p.signedUrl,
+                      // Stabiler Cache-Key: die signierte URL wechselt pro Abruf
+                      // (neues Token) -> ohne cacheKey Cache-Miss + Egress + kein
+                      // Offline-Bild. p.id ist stabil.
+                      cacheKey: p.id,
                       width: 96,
                       height: 96,
                       fit: BoxFit.cover,
@@ -1397,6 +1401,8 @@ class _PhotoViewer extends ConsumerWidget {
               child: InteractiveViewer(
                 child: CachedNetworkImage(
                   imageUrl: photo.signedUrl,
+                  cacheKey:
+                      photo.id, // stabil; signierte URL wechselt pro Abruf
                   fit: BoxFit.contain,
                   errorWidget: (_, __, ___) => const Icon(
                     Icons.broken_image_outlined,

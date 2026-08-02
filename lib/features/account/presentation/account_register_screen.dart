@@ -116,9 +116,16 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
     } on AuthException catch (e) {
       setState(() => _error = germanAuthError(e));
     } catch (e, st) {
-      // Nicht verschlucken: echten Fehler loggen + sichtbar melden.
-      debugPrint('signUp/link failed: $e\n$st');
-      setState(() => _error = 'Registrierung fehlgeschlagen: $e');
+      // Nur in Debug-Builds loggen (nie in Release -> keine PII/Fehlerdetails
+      // im Produktions-Log). Nutzer bekommt eine neutrale Meldung ohne $e.
+      assert(() {
+        debugPrint('signUp/link failed: $e\n$st');
+        return true;
+      }());
+      setState(
+        () => _error =
+            'Registrierung fehlgeschlagen. Bitte versuche es später erneut.',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -190,8 +197,14 @@ class _AccountRegisterScreenState extends ConsumerState<AccountRegisterScreen> {
             : germanAuthError(e);
       });
     } catch (e, st) {
-      debugPrint('resend failed: $e\n$st');
-      setState(() => _error = 'Erneutes Senden fehlgeschlagen: $e');
+      assert(() {
+        debugPrint('resend failed: $e\n$st');
+        return true;
+      }());
+      setState(
+        () => _error =
+            'Erneutes Senden fehlgeschlagen. Bitte versuche es später erneut.',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }

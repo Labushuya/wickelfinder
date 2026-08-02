@@ -31,18 +31,23 @@ void main() {
       expect(openStateAt('Mo-Sa 10:00-18:00; Su off', wed12), OpenState.open);
     });
 
+    test('PH/SH-Off-Klausel wird toleriert (Werktag bleibt auswertbar)', () {
+      // 'PH off' darf den klaren Werktags-Status nicht auf unknown ziehen.
+      expect(openStateAt('Mo-Fr 08:00-18:00; PH off', tue10), OpenState.open);
+      expect(openStateAt('Mo-Fr 08:00-18:00; PH off', tue19), OpenState.closed);
+      // Kombiniert Su + PH: Sonntag geschlossen, PH ignoriert.
+      expect(
+        openStateAt('Mo-Sa 10:00-18:00; Su,PH off', sun12),
+        OpenState.closed,
+      );
+    });
+
     test('reines Zeitfenster gilt täglich', () {
       expect(openStateAt('08:00-18:00', sun12), OpenState.open);
       expect(openStateAt('08:00-18:00', tue19), OpenState.closed);
     });
 
     group('unknown (ehrlich, nie falsch offen/zu)', () {
-      test('PH off -> unknown (kein Feiertagskalender)', () {
-        expect(
-          openStateAt('Mo-Fr 08:00-18:00; PH off', tue10),
-          OpenState.unknown,
-        );
-      });
       test('Saison/Monate -> unknown', () {
         expect(
           openStateAt('Apr-Oct: Mo-Su 09:00-19:00', tue10),

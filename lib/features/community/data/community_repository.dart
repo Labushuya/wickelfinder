@@ -296,20 +296,28 @@ class CommunityRepository {
         .select('id, name, location_hint, wheelchair, fee, fee_mode, lat, lon');
     return [
       for (final row in rows)
-        ChangingPlace(
-          id: row['id'] as String,
-          location: LatLng(
-            (row['lat'] as num).toDouble(),
-            (row['lon'] as num).toDouble(),
-          ),
-          name: row['name'] as String?,
-          wheelchairAccessible: row['wheelchair'] as bool?,
-          fee: row['fee'] as bool?,
-          feeMode: FeeMode.fromWire(row['fee_mode'] as String?),
-          locationHint: row['location_hint'] as String?,
-          source: PlaceSource.community,
-        ),
+        if (_communityRowToPlace(row) case final p?) p,
     ];
+  }
+
+  /// Baut aus einer Community-View-Zeile einen [ChangingPlace]. Gibt null
+  /// zurueck, wenn Koordinaten fehlen/ungueltig sind — so reisst EINE kaputte
+  /// Zeile nicht die ganze Ebene weg (frueher: TypeError -> alle Pins verschwunden).
+  ChangingPlace? _communityRowToPlace(dynamic row) {
+    final id = row['id'] as String?;
+    final lat = (row['lat'] as num?)?.toDouble();
+    final lon = (row['lon'] as num?)?.toDouble();
+    if (id == null || lat == null || lon == null) return null;
+    return ChangingPlace(
+      id: id,
+      location: LatLng(lat, lon),
+      name: row['name'] as String?,
+      wheelchairAccessible: row['wheelchair'] as bool?,
+      fee: row['fee'] as bool?,
+      feeMode: FeeMode.fromWire(row['fee_mode'] as String?),
+      locationHint: row['location_hint'] as String?,
+      source: PlaceSource.community,
+    );
   }
 
   /// Fuegt einen neuen Community-Platz hinzu. Meldet lazy anonym an.
@@ -353,19 +361,7 @@ class CommunityRepository {
         .order('created_at', ascending: false);
     return [
       for (final row in rows)
-        ChangingPlace(
-          id: row['id'] as String,
-          location: LatLng(
-            (row['lat'] as num).toDouble(),
-            (row['lon'] as num).toDouble(),
-          ),
-          name: row['name'] as String?,
-          wheelchairAccessible: row['wheelchair'] as bool?,
-          fee: row['fee'] as bool?,
-          feeMode: FeeMode.fromWire(row['fee_mode'] as String?),
-          locationHint: row['location_hint'] as String?,
-          source: PlaceSource.community,
-        ),
+        if (_communityRowToPlace(row) case final p?) p,
     ];
   }
 
@@ -450,7 +446,9 @@ class CommunityRepository {
   // --- Fotos ----------------------------------------------------------------
 
   static const _bucket = 'place-photos';
-  // Signierte URLs 7 Tage gueltig -> Cache-Key bleibt stabil (Egress-schonend).
+  // Signierte URLs 7 Tage gueltig. Die URL selbst wechselt aber pro Abruf
+  // (neues Token) -> im UI wird CachedNetworkImage mit stabilem cacheKey (Foto-ID)
+  // aufgerufen, damit der Disk-Cache greift (Egress-schonend, offline-faehig).
   static const _signedUrlTtl = 604800;
 
   /// Laedt ein Foto hoch: EXIF/GPS entfernen + komprimieren -> Storage ->
