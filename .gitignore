@@ -6,6 +6,8 @@
 .DS_Store
 .atom/
 .buildlog/
+# Build-Output (z. B. APKs) nie versionieren
+.build/
 .history
 .svn/
 migrate_working_dir/
